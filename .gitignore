@@ -38,3 +38,4 @@ next-env.d.ts
 plan.md
 
 /src/generated/prisma
+*.swp
