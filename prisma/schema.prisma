@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id         String   @id @db.Uuid
+  email      String   @unique
+  name       String?
+  created_at DateTime @default(now())
+
+  workouts  Workout[]
+  exercises Exercise[]
+}
+
+model Exercise {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  muscle_groups String[]
+  equipment     String?
+  user_id       String?  @db.Uuid
+
+  user              User?             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workout_exercises WorkoutExercise[]
+
+  @@index([user_id])
+}
+
+model Workout {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String   @db.Uuid
+  date             DateTime @default(now())
+  notes            String?
+  duration_minutes Int?
+
+  user              User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workout_exercises WorkoutExercise[]
+
+  @@index([user_id])
+  @@index([date])
+}
+
+model WorkoutExercise {
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workout_id  String @db.Uuid
+  exercise_id String @db.Uuid
+  order       Int
+
+  workout  Workout  @relation(fields: [workout_id], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exercise_id], references: [id], onDelete: Cascade)
+  sets     Set[]
+
+  @@index([workout_id])
+  @@index([exercise_id])
+}
+
+model Set {
+  id                  String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workout_exercise_id String @db.Uuid
+  reps                Int
+  weight              Float
+  set_number          Int
+
+  workout_exercise WorkoutExercise @relation(fields: [workout_exercise_id], references: [id], onDelete: Cascade)
+
+  @@index([workout_exercise_id])
+}
