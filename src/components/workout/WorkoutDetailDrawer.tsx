@@ -1,39 +1,16 @@
 "use client";
 
-import { useEffect, useCallback, useState, useRef } from "react";
+import { useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer } from "@/components/ui/Drawer";
-import { DeleteWorkoutButton } from "@/components/workout/DeleteWorkoutButton";
 import { WorkoutForm } from "@/components/workout/WorkoutForm";
+import { WorkoutSummaryView } from "@/components/workout/WorkoutSummaryView";
+import { WorkoutViewDetail } from "@/components/workout/WorkoutViewDetail";
 import { useWorkoutStore } from "@/store/workoutStore";
-import type { SessionSummaryData, WorkoutDetail } from "@/types/workout";
-
-function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(dateStr));
-}
-
-function formatDateShort(dateStr: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(dateStr));
-}
-
-const fadeSlide = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -4 },
-  transition: { duration: 0.15, ease: "easeOut" },
-} as const;
+import { useWorkoutDetail } from "@/components/workout/hooks/useWorkoutDetail";
+import { formatDate, fadeSlide } from "@/lib/utils";
+import type { SessionSummaryData } from "@/types/workout";
 
 export function WorkoutDetailDrawer() {
   const {
@@ -47,32 +24,7 @@ export function WorkoutDetailDrawer() {
   } = useWorkoutStore();
   const router = useRouter();
 
-  const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  // Reset loaded data when the selected workout changes
-  const [trackedId, setTrackedId] = useState<string | null>(null);
-  if (isDrawerOpen && selectedWorkoutId && selectedWorkoutId !== trackedId) {
-    setTrackedId(selectedWorkoutId);
-    setWorkout(null);
-    setLoading(true);
-  } else if (!isDrawerOpen && trackedId !== null) {
-    setTrackedId(null);
-    setWorkout(null);
-  }
-
-  const fetchWorkout = useCallback(async (id: string) => {
-    try {
-      const r = await fetch(`/api/workouts/${id}`);
-      setWorkout(await r.json());
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (loading && selectedWorkoutId) fetchWorkout(selectedWorkoutId);
-  }, [loading, selectedWorkoutId, fetchWorkout]);
+  const { workout, setWorkout, loading } = useWorkoutDetail(isDrawerOpen, selectedWorkoutId);
 
   function handleCreateSave(data: SessionSummaryData) {
     setDrawerView("summary", data);
@@ -126,12 +78,6 @@ export function WorkoutDetailDrawer() {
   if (drawerTitle !== undefined) frozenTitle.current = drawerTitle;
   const effectiveTitle = isDrawerOpen ? drawerTitle : frozenTitle.current;
 
-  const totalSets =
-    workout?.workout_exercises.reduce((sum, we) => sum + we.sets.length, 0) ?? 0;
-
-  const summaryTotalSets =
-    activeSession?.workout_exercises.reduce((sum, we) => sum + we.sets.length, 0) ?? 0;
-
   const initialData = workout
     ? {
         date: workout.date.split("T")[0],
@@ -169,193 +115,28 @@ export function WorkoutDetailDrawer() {
 
           {/* ── Summary ── */}
           {drawerView === "summary" && activeSession && (
-            <motion.div key="summary" {...fadeSlide} className="space-y-5">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-muted uppercase tracking-wider">
-                  {formatDateShort(activeSession.date)}
-                </p>
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-success">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                  Logged
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4 text-sm text-secondary">
-                {activeSession.duration_minutes && (
-                  <span className="tabular-nums">{activeSession.duration_minutes} min</span>
-                )}
-                <span className="tabular-nums">
-                  {activeSession.workout_exercises.length}{" "}
-                  {activeSession.workout_exercises.length === 1 ? "exercise" : "exercises"}
-                </span>
-                <span className="tabular-nums">
-                  {summaryTotalSets} {summaryTotalSets === 1 ? "set" : "sets"}
-                </span>
-              </div>
-
-              {activeSession.notes && (
-                <p className="text-sm text-secondary italic border-l-2 border-accent/30 pl-3">
-                  {activeSession.notes}
-                </p>
-              )}
-
-              {activeSession.workout_exercises.length > 0 && (
-                <div className="space-y-3">
-                  {activeSession.workout_exercises.map((we) => (
-                    <div key={we.id} className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
-                      <div className="px-5 py-3.5 border-b border-border">
-                        <p className="font-semibold text-sm text-primary">{we.exercise.name}</p>
-                      </div>
-                      <div className="px-5 py-3.5">
-                        <div className="grid grid-cols-[40px_1fr_1fr] gap-4 mb-2 text-[11px] font-semibold text-muted uppercase tracking-wider">
-                          <span>Set</span>
-                          <span>Reps</span>
-                          <span>Weight</span>
-                        </div>
-                        {we.sets.map((s) => (
-                          <div
-                            key={s.id}
-                            className="grid grid-cols-[40px_1fr_1fr] gap-4 py-1.5 border-b border-border-subtle last:border-0"
-                          >
-                            <span className="text-sm font-medium text-muted tabular-nums">{s.set_number}</span>
-                            <span className="text-sm font-medium text-primary tabular-nums">{s.reps}</span>
-                            <span className="text-sm font-medium text-primary tabular-nums">{s.weight} lbs</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={closeDrawer}
-                  className="bg-accent text-white text-sm font-semibold rounded-lg px-6 py-3 hover:bg-accent-hover transition-colors"
-                >
-                  Done
-                </button>
-                <button
-                  onClick={handleViewDetails}
-                  className="text-sm font-medium text-secondary hover:text-primary transition-colors"
-                >
-                  View details
-                </button>
-              </div>
+            <motion.div key="summary" {...fadeSlide}>
+              <WorkoutSummaryView
+                session={activeSession}
+                onDone={closeDrawer}
+                onViewDetails={handleViewDetails}
+              />
             </motion.div>
           )}
 
           {/* ── View ── */}
           {drawerView === "view" && (
-            <motion.div key="view" {...fadeSlide} className="space-y-5">
-              {/* Preview skeleton while fetching */}
-              {loading && previewData && (
-                <>
-                  <div className="flex items-center gap-3 text-sm text-secondary">
-                    {previewData.durationMinutes && (
-                      <span className="tabular-nums">{previewData.durationMinutes} min</span>
-                    )}
-                    <span className="tabular-nums">{previewData.totalSets} {previewData.totalSets === 1 ? "set" : "sets"}</span>
-                  </div>
-                  {previewData.notes && (
-                    <p className="text-sm text-secondary italic border-l-2 border-accent/30 pl-3">
-                      {previewData.notes}
-                    </p>
-                  )}
-                  <div className="space-y-3">
-                    {previewData.exerciseNames.map((name) => (
-                      <div key={name} className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
-                        <div className="px-5 py-3.5 border-b border-border">
-                          <p className="font-semibold text-sm text-primary">{name}</p>
-                        </div>
-                        <div className="px-5 py-3.5 animate-pulse">
-                          <div className="h-3 bg-bg rounded w-24" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Loading skeleton fallback */}
-              {loading && !previewData && (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-surface rounded-lg w-1/3" />
-                  <div className="h-24 bg-surface rounded-xl" />
-                  <div className="h-24 bg-surface rounded-xl" />
-                </div>
-              )}
-
-              {/* Loaded workout */}
-              {!loading && workout && (
-                <>
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 text-sm text-secondary">
-                      {workout.duration_minutes && (
-                        <span className="tabular-nums">{workout.duration_minutes} min</span>
-                      )}
-                      <span className="tabular-nums">{totalSets} {totalSets === 1 ? "set" : "sets"}</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => setDrawerView("edit")}
-                        className="text-sm font-medium text-primary border border-border rounded-lg px-3 py-1.5 hover:bg-surface transition-colors"
-                      >
-                        Edit
-                      </button>
-                      <DeleteWorkoutButton
-                        workoutId={workout.id}
-                        onDelete={() => {
-                          closeDrawer();
-                          router.refresh();
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {workout.notes && (
-                    <p className="text-sm text-secondary italic border-l-2 border-accent/30 pl-3">
-                      {workout.notes}
-                    </p>
-                  )}
-
-                  <div className="space-y-3">
-                    {workout.workout_exercises.map((we) => (
-                      <div key={we.id} className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
-                        <div className="px-5 py-3.5 border-b border-border">
-                          <p className="font-semibold text-sm text-primary">{we.exercise.name}</p>
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {we.exercise.muscle_groups.map((m) => (
-                              <span key={m} className="text-xs text-muted bg-bg rounded-md px-2 py-0.5">
-                                {m}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="px-5 py-3.5">
-                          <div className="grid grid-cols-[40px_1fr_1fr] gap-4 mb-2 text-[11px] font-semibold text-muted uppercase tracking-wider">
-                            <span>Set</span>
-                            <span>Reps</span>
-                            <span>Weight</span>
-                          </div>
-                          {we.sets.map((s) => (
-                            <div
-                              key={s.id}
-                              className="grid grid-cols-[40px_1fr_1fr] gap-4 py-1.5 border-b border-border-subtle last:border-0"
-                            >
-                              <span className="text-sm font-medium text-muted tabular-nums">{s.set_number}</span>
-                              <span className="text-sm font-medium text-primary tabular-nums">{s.reps}</span>
-                              <span className="text-sm font-medium text-primary tabular-nums">{s.weight} lbs</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+            <motion.div key="view" {...fadeSlide}>
+              <WorkoutViewDetail
+                workout={workout}
+                loading={loading}
+                previewData={previewData}
+                onEdit={() => setDrawerView("edit")}
+                onDelete={() => {
+                  closeDrawer();
+                  router.refresh();
+                }}
+              />
             </motion.div>
           )}
 

@@ -146,9 +146,17 @@ src/
 │   ├── DashboardClient.tsx     # Main client component (list + drawer + recovery panel)
 │   ├── workout/
 │   │   ├── WorkoutDetailDrawer.tsx # Drawer with 4 views: create/view/edit/summary (AnimatePresence)
-│   │   ├── WorkoutForm.tsx     # Create/edit workout form
+│   │   ├── WorkoutForm.tsx     # Create/edit workout form (uses hooks + sub-components)
+│   │   ├── WorkoutSummaryView.tsx  # Summary view after logging a workout
+│   │   ├── WorkoutViewDetail.tsx   # View mode: loaded workout + skeleton states
+│   │   ├── ExerciseSearchPanel.tsx # Exercise search + custom exercise form (animated results)
+│   │   ├── ExerciseCard.tsx    # Single exercise card with sets grid
 │   │   ├── WorkoutsFilter.tsx  # Search + date range filters
-│   │   └── DeleteWorkoutButton.tsx
+│   │   ├── DeleteWorkoutButton.tsx # Two-step confirm delete (idle: text-primary, confirming: danger)
+│   │   └── hooks/
+│   │       ├── useWorkoutDetail.ts  # Fetch-on-open logic for the drawer
+│   │       ├── useExerciseSearch.ts # Search state, debounce, cache, outside-click
+│   │       └── useExerciseList.ts   # Exercise/set CRUD state
 │   ├── recovery/
 │   │   ├── RecoveryPanel.tsx   # Dashboard sidebar: dual body maps + status list
 │   │   ├── RecoveryView.tsx    # Full-page recovery view
@@ -190,6 +198,7 @@ src/
 │   ├── prisma.ts               # Singleton PrismaClient
 │   ├── recovery.ts             # calculateRecovery(userId) — recovery engine (no new DB tables)
 │   ├── units.ts                # Height/weight unit conversion and display utilities
+│   ├── utils.ts                # Shared: uid() local ID generator, formatDate/formatDateShort, fadeSlide animation config
 │   └── supabase/
 │       ├── client.ts           # Browser client
 │       ├── server.ts           # Server client
