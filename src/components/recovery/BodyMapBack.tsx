@@ -53,7 +53,7 @@ export function BodyMapBack({ muscles, onSelectMuscle }: BodyMapProps) {
         border={isDark ? "#1A1A18" : "#C4C2BB"}
         onBodyPartClick={(part) => {
           const muscleName = SLUG_TO_MUSCLE[part.slug ?? ""];
-          if (muscleName) onSelectMuscle(muscleName);
+          if (muscleName) onSelectMuscle?.(muscleName);
         }}
       />
     </div>

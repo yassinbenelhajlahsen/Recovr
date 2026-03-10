@@ -14,5 +14,5 @@ export type MuscleRecovery = {
 
 export type BodyMapProps = {
   muscles: Record<string, { recoveryPct: number } | undefined>;
-  onSelectMuscle: (muscle: string) => void;
+  onSelectMuscle?: (muscle: string) => void;
 };

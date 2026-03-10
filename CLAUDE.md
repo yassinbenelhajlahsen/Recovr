@@ -111,12 +111,14 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 - `/onboarding` — locked multi-step onboarding (name → body metrics → goal). Server-side gate: redirects to `/dashboard` if already onboarded, redirects to `/auth/signin` if not authed. Dashboard also redirects here if `onboarding_completed` is false.
 - `/dashboard` — the main screen: greeting, log workout CTA, filters, full workout list + recovery panel (DashboardClient)
 - `/recovery` — full recovery page: front+back SVG body maps + tap-to-inspect muscle detail panel
+- `/progress` — per-exercise progress charts (estimated 1RM + total volume over time), exercise selector, date range filter, stats bar
 
 ## TypeScript Types
 
 - **All shared types live in `src/types/`** — never define reusable types inline in component or lib files
 - **Rule**: if a type is used by more than one file, or could be, it goes in `src/types/`. Internal one-off types (e.g. a local state shape used nowhere else) may stay inline.
 - **Files**:
+  - `src/types/progress.ts` — `DateRangePreset`, `PerformedExercise`, `ExerciseSession`, `ChartDataPoint`, `ProgressClientProps`
   - `src/types/recovery.ts` — `RecoveryStatus`, `MuscleRecovery`, `BodyMapProps`
   - `src/types/workout.ts` — `SetEntry`, `ExerciseEntry`, `Exercise`, `WorkoutFormInitialData`, `WorkoutSaveData`, `WorkoutFormProps`, `WorkoutPreview`, `SessionSummaryData`, `SetData`, `ExerciseData`, `WorkoutExerciseData`, `WorkoutDetail`, `Workout`, `DashboardClientProps`
   - `src/types/user.ts` — `UnitSystem`, `UserProfile`, `Tab`
@@ -145,6 +147,8 @@ src/
 │   │   └── callback/route.ts   # OAuth + email confirmation handler
 │   ├── recovery/
 │   │   └── page.tsx            # Full recovery page (Server Component)
+│   ├── progress/
+│   │   └── page.tsx            # Progress page (Server Component — Prisma query, passes to ProgressClient)
 │   └── api/
 │       ├── exercises/route.ts
 │       ├── workouts/route.ts
@@ -170,7 +174,7 @@ src/
 │   │       ├── useExerciseList.ts   # Exercise/set CRUD state
 │   │       └── useWorkoutForm.ts    # Form state (date/notes/duration/saving/error), handleSubmit, createCustomExercise
 │   ├── recovery/
-│   │   ├── RecoveryPanel.tsx   # Dashboard sidebar: dual body maps + status list
+│   │   ├── RecoveryPanel.tsx   # Dashboard sidebar: dual body maps + stat pills only (view-only, links to /recovery)
 │   │   ├── RecoveryView.tsx    # Full-page recovery view
 │   │   ├── RecoverySummary.tsx # Compact summary widget
 │   │   ├── BodyMapFront.tsx    # Front SVG body map (uses @mjcdev/react-body-highlighter)
@@ -179,6 +183,14 @@ src/
 │   │   ├── recoveryColors.ts  # HSL fill interpolation, status color/label maps, buildBodyMapCss
 │   │   └── hooks/
 │   │       └── useRecoverySelection.ts # selectedMuscle state, handleSelect toggle, muscleMap, status counts
+│   ├── progress/
+│   │   ├── ProgressClient.tsx  # Orchestrator: ExerciseSelector + DateRangeSelector + StatsBar + charts
+│   │   ├── ExerciseSelector.tsx # Styled <select> of performed exercises with session counts
+│   │   ├── DateRangeSelector.tsx # Pill buttons: 30d / 90d / 6m / 1y / all (framer-motion layoutId)
+│   │   ├── StatsBar.tsx        # 3-card row: best 1RM, avg volume, sessions tracked
+│   │   ├── ProgressChart.tsx   # Recharts LineChart wrapper (1RM or volume, custom tooltip)
+│   │   └── hooks/
+│   │       └── useProgressFilters.ts # selectedExerciseId, dateRange, chartData (useMemo), stats
 │   ├── layout/
 │   │   ├── Navbar.tsx          # Top nav bar (logo, nav links, avatar button)
 │   │   ├── UserMenu.tsx        # Avatar dropdown: theme toggle, settings, sign out
@@ -243,7 +255,8 @@ prisma/
 - **Status thresholds**: `recovered` ≥ 0.85, `partial` ≥ 0.45, `fatigued` < 0.45
 - **16 muscle groups**: chest, triceps, shoulders, lower back, hamstrings, glutes, traps, back, biceps, rear shoulders, quadriceps, calves, forearms, core, abs, hip flexors, tibialis
 - **SVG body maps**: `@mjcdev/react-body-highlighter` library; `recoveryColors.ts` does HSL interpolation (red→yellow→green) for fill colors
-- **Dashboard integration**: `RecoveryPanel` is a sticky right-column sidebar; recovery data is fetched in parallel with workouts in `dashboard/page.tsx`
+- **Dashboard integration**: `RecoveryPanel` is a sticky right-column sidebar; recovery data is fetched in parallel with workouts in `dashboard/page.tsx`. The panel is **view-only** (body maps + stat pills, no tap-to-inspect); the entire card links to `/recovery` for full details
+- **`BodyMapProps.onSelectMuscle` is optional** — body maps can be rendered without click handlers (used in dashboard panel)
 
 ## State Management (Zustand)
 

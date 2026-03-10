@@ -4,8 +4,6 @@ import Link from "next/link";
 import type { MuscleRecovery } from "@/types/recovery";
 import { BodyMapFront } from "./BodyMapFront";
 import { BodyMapBack } from "./BodyMapBack";
-import { MuscleDetailPanel } from "./MuscleDetailPanel";
-import { STATUS_LABELS, STATUS_COLORS } from "./recoveryColors";
 import { useRecoverySelection } from "./hooks/useRecoverySelection";
 
 type Props = {
@@ -13,8 +11,7 @@ type Props = {
 };
 
 export function RecoveryPanel({ recovery }: Props) {
-  const { selectedMuscle, selectedData, muscleMap, handleSelect, fatigued, partial, recovered } =
-    useRecoverySelection(recovery);
+  const { muscleMap, fatigued, partial, recovered } = useRecoverySelection(recovery);
 
   return (
     <div className="flex flex-col gap-4">
@@ -33,81 +30,34 @@ export function RecoveryPanel({ recovery }: Props) {
       </div>
 
       {/* Body maps: front + back side by side */}
-      <div className="bg-surface border border-border-subtle rounded-xl overflow-hidden">
-        <div className="flex">
-          <div className="flex-1 min-w-0 px-2 pt-3 pb-1">
-            <p className="text-xs text-muted text-center mb-1 uppercase tracking-widest">Front</p>
-            <BodyMapFront
-              muscles={muscleMap}
-
-              onSelectMuscle={handleSelect}
-            />
+      <Link href="/recovery" className="block">
+        <div className="bg-surface border border-border-subtle rounded-xl overflow-hidden hover:border-border transition-colors">
+          <div className="flex">
+            <div className="flex-1 min-w-0 px-2 pt-3 pb-1">
+              <p className="text-xs text-muted text-center mb-1 uppercase tracking-widest">Front</p>
+              <BodyMapFront muscles={muscleMap} />
+            </div>
+            <div className="w-px bg-border-subtle self-stretch" />
+            <div className="flex-1 min-w-0 px-2 pt-3 pb-1">
+              <p className="text-xs text-muted text-center mb-1 uppercase tracking-widest">Back</p>
+              <BodyMapBack muscles={muscleMap} />
+            </div>
           </div>
-          <div className="w-px bg-border-subtle self-stretch" />
-          <div className="flex-1 min-w-0 px-2 pt-3 pb-1">
-            <p className="text-xs text-muted text-center mb-1 uppercase tracking-widest">Back</p>
-            <BodyMapBack
-              muscles={muscleMap}
 
-              onSelectMuscle={handleSelect}
-            />
+          {/* Stat pills */}
+          <div className="flex justify-center gap-3 px-4 py-3 border-t border-border-subtle">
+            <span className="text-xs font-medium text-success">
+              <span className="text-sm font-semibold">{recovered}</span> recovered
+            </span>
+            <span className="text-xs font-medium text-recovery-yellow">
+              <span className="text-sm font-semibold">{partial}</span> recovering
+            </span>
+            <span className="text-xs font-medium text-danger">
+              <span className="text-sm font-semibold">{fatigued}</span> fatigued
+            </span>
           </div>
         </div>
-
-        {/* Stat pills */}
-        <div className="flex justify-center gap-3 px-4 py-3 border-t border-border-subtle">
-          <span className="text-xs font-medium text-success">
-            <span className="text-sm font-semibold">{recovered}</span> recovered
-          </span>
-          <span className="text-xs font-medium text-recovery-yellow">
-            <span className="text-sm font-semibold">{partial}</span> recovering
-          </span>
-          <span className="text-xs font-medium text-danger">
-            <span className="text-sm font-semibold">{fatigued}</span> fatigued
-          </span>
-        </div>
-      </div>
-
-      {/* Muscle detail panel (shown on tap) */}
-      {selectedData && (
-        <MuscleDetailPanel
-          recovery={selectedData}
-          onClose={() => handleSelect(selectedMuscle!)}
-        />
-      )}
-
-      {/* Collapsed: quick muscle status list */}
-      {!selectedData && (
-        <div className="bg-surface border border-border-subtle rounded-xl overflow-hidden">
-          {recovery
-            .filter((r) => r.status !== "recovered")
-            .slice(0, 5)
-            .map((r) => (
-              <button
-                key={r.muscle}
-                onClick={() => handleSelect(r.muscle)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-elevated transition-colors border-b border-border-subtle last:border-0"
-              >
-                <div
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{
-                    backgroundColor:
-                      r.status === "partial"
-                        ? "var(--c-recovery-yellow)"
-                        : "var(--c-danger)",
-                  }}
-                />
-                <span className="text-sm text-primary capitalize flex-1">{r.muscle}</span>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[r.status]}`}>
-                  {STATUS_LABELS[r.status]}
-                </span>
-              </button>
-            ))}
-          {recovery.filter((r) => r.status !== "recovered").length === 0 && (
-            <p className="text-sm text-success px-3 py-3 text-center">All muscles recovered ✓</p>
-          )}
-        </div>
-      )}
+      </Link>
     </div>
   );
 }
