@@ -25,6 +25,8 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 - **Middleware**: session refresh is handled in `src/middleware.ts` via `updateSession()`
 - After `signInWithPassword`, call `ensureUserInDb(user)` from `@/lib/supabase/ensure-user` to sync user to Prisma DB
 - OAuth and email confirmation flows sync user via `src/app/auth/callback/route.ts`
+- **OAuth callback upsert**: use `where: { email }` (not `id`) to avoid P2002 unique constraint errors when a user has previously signed up with email/password and then signs in with OAuth (same email, different Supabase user ID). The `update` sets `id` to the OAuth user's ID to keep the DB in sync.
+- **Supabase identity linking**: enable "Prevent duplicate emails across providers" in Auth settings so users can't accidentally create two accounts. Once linked, Supabase shows both providers on the same user entry.
 - **Google OAuth is configured** in Supabase dashboard (enabled, redirect URL set)
 - **Asymmetric JWT signing keys (RS256)** are enabled in Supabase dashboard
 

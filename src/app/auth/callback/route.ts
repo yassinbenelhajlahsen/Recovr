@@ -13,8 +13,8 @@ export async function GET(request: Request) {
 
     if (!error && data.user) {
       await prisma.user.upsert({
-        where: { id: data.user.id },
-        update: { email: data.user.email! },
+        where: { email: data.user.email! },
+        update: { id: data.user.id },
         create: {
           id: data.user.id,
           email: data.user.email!,
