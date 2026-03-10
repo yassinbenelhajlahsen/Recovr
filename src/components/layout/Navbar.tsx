@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { usePathname } from "next/navigation";
+import { useRef } from "react";
 import { useAppStore } from "@/store/appStore";
 import { UserMenu } from "./UserMenu";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
-import type { User } from "@supabase/supabase-js";
+import { useNavbar } from "./hooks/useNavbar";
 
 function getInitials(name?: string | null, email?: string): string {
   if (name) {
@@ -18,55 +17,23 @@ function getInitials(name?: string | null, email?: string): string {
 }
 
 export function Navbar() {
-  const router = useRouter();
   const pathname = usePathname();
   const isOnboarding = useAppStore((s) => s.isOnboarding) || pathname === "/onboarding";
   const isAuthPage = pathname.startsWith("/auth");
   const showNavLinks = !isOnboarding && !isAuthPage;
-  const [user, setUser] = useState<User | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [profile, setProfile] = useState<{
-    name?: string | null;
-    height_inches?: number | null;
-    weight_lbs?: number | null;
-    fitness_goals?: string[];
-  } | null>(null);
+
+  const {
+    user,
+    profile,
+    menuOpen,
+    setMenuOpen,
+    settingsOpen,
+    setSettingsOpen,
+    handleSignOut,
+    clearProfile,
+  } = useNavbar();
+
   const avatarRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_, session) =>
-      setUser(session?.user ?? null),
-    );
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Fetch profile when settings drawer opens
-  useEffect(() => {
-    if (settingsOpen) {
-      fetch("/api/user/profile")
-        .then((r) => r.json())
-        .then(setProfile);
-    }
-  }, [settingsOpen]);
-
-  // Close dropdown on any navigation by including pathname in the key state
-  const [menuPath, setMenuPath] = useState(pathname);
-  if (menuPath !== pathname) {
-    setMenuPath(pathname);
-    if (menuOpen) setMenuOpen(false);
-  }
-
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/auth/signin");
-    router.refresh();
-  }
 
   const displayName = user?.user_metadata?.full_name as string | undefined;
   const initials = getInitials(displayName, user?.email);
@@ -127,7 +94,7 @@ export function Navbar() {
             open={settingsOpen}
             onClose={() => {
               setSettingsOpen(false);
-              setProfile(null);
+              clearProfile();
             }}
             user={{
               email: user.email ?? "",
