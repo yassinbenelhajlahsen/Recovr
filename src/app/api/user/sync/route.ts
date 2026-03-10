@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
   const body = await request.json();
 
-  await prisma.user.upsert({
+  const dbUser = await prisma.user.upsert({
     where: { id: user.id },
     update: { email: user.email! },
     create: {
@@ -22,7 +22,8 @@ export async function POST(request: Request) {
       email: user.email!,
       name: body.name ?? null,
     },
+    select: { onboarding_completed: true },
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, onboarding_completed: dbUser.onboarding_completed });
 }
