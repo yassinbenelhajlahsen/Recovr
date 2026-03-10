@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "@/components/DashboardClient";
+import { calculateRecovery } from "@/lib/recovery";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
@@ -43,7 +44,7 @@ export default async function DashboardPage({
   const muscles = musclesParam ? musclesParam.split(",").filter(Boolean) : [];
   const { from, to } = resolveDatePreset(datePreset);
 
-  const [dbUser, workouts] = await Promise.all([
+  const [dbUser, workouts, recovery] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.workout.findMany({
       where: {
@@ -80,6 +81,7 @@ export default async function DashboardPage({
       },
       orderBy: { date: "desc" },
     }),
+    calculateRecovery(userId),
   ]);
 
   const displayName = dbUser?.name || userEmail;
@@ -101,6 +103,7 @@ export default async function DashboardPage({
       displayName={displayName}
       workouts={serializedWorkouts}
       hasFilters={hasFilters}
+      recovery={recovery}
     />
   );
 }
