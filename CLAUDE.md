@@ -75,7 +75,9 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 - **Fonts**: Fraunces (display/headlines, `font-display`), Geist Sans (body/UI, `font-sans`)
 - **Color tokens**: defined as CSS custom properties in `globals.css` (:root + .dark), mapped to Tailwind via `@theme inline`
 - **Semantic classes**: `bg-bg`, `bg-surface`, `bg-elevated`, `text-primary`, `text-secondary`, `text-muted`, `text-accent`, `bg-accent`, `border-border`, `border-border-subtle`, `text-danger`, `text-success`, `text-recovery-yellow`
-- **Recovery yellow token**: `--c-recovery-yellow` = `#B8860B` (light) / `#D4A017` (dark) — used for "partial/recovering" muscle status
+- **Recovery yellow token**: `--c-recovery-yellow` = `#A07A12` (light) / `#D4A017` (dark) — used for "partial/recovering" muscle status
+- **Light mode recovery colors** (muted earthy tones, not vivid primaries): `--c-danger: #B84040`, `--c-success: #3D7056`, `--c-recovery-yellow: #A07A12`. SVG fill anchors use higher lightness (~58-62%) and lower saturation (~35-55%) to avoid clashing with the warm off-white background.
+- **SVG fill color rule**: light mode fills must be in the 50–65% lightness range so they read as muted overlays rather than harsh dark blobs on white.
 - **Accent color**: terracotta/coral — `#D4552A` (light) / `#E8633A` (dark) — reserved for primary CTAs and interactive highlights
 - **Palette**: warm neutrals (not zinc). Light: off-white `#F7F7F4` bg. Dark: warm black `#0B0B0A` bg
 - **Typography hierarchy**: serif italic headlines (`font-display text-4xl italic`), sans-serif body, uppercase tracking-wider labels for section headers
@@ -137,9 +139,12 @@ src/
 │   │   ├── BodyMapBack.tsx     # Back SVG body map
 │   │   ├── MuscleDetailPanel.tsx # Tap-to-inspect muscle stats panel
 │   │   └── recoveryColors.ts  # HSL fill interpolation + status color/label maps
+│   ├── UserMenu.tsx            # Avatar dropdown: theme toggle, settings, sign out
+│   ├── SettingsDrawer.tsx      # Settings drawer: profile (name/email) + mock body metrics + mock goals
 │   └── ui/
 │       ├── Modal.tsx
 │       ├── Drawer.tsx
+│       ├── DropdownMenu.tsx    # Portal dropdown: DropdownMenu, DropdownMenuItem, DropdownMenuDivider
 │       ├── FloatingInput.tsx   # Floating label input component
 │       └── PasswordChecklist.tsx # Password validation checklist
 ├── store/
@@ -181,6 +186,14 @@ prisma/
   - `WorkoutDetailDrawer`: uses `previewData` from card click to render instant preview (date, exercise names, stats) while full detail loads; uses `onSave` data after edit to update view without refetching
   - `WorkoutForm.onSave`: passes full workout data (date, exercises, sets) constructed from local state — consumers should use this instead of refetching
 - **Exercise search cache**: `WorkoutForm` uses a `useRef<Map<string, Exercise[]>>` to cache `/api/exercises` search results per query. Cache is cleared after creating a custom exercise.
+
+## Navbar & User Menu
+
+- **Avatar button** (top right): 36×36 `rounded-full bg-surface border border-border-subtle`, shows user initials (`text-accent`). Initials derived from `user.user_metadata?.full_name` or first letter of email.
+- **Dropdown** (`UserMenu.tsx`): opens on avatar click via `DropdownMenu` portal. Contains: email header, theme toggle, settings button, sign out. Closes on route change, Escape, click-outside, scroll.
+- **Settings drawer** (`SettingsDrawer.tsx`): right-slide `Drawer` with three sections — Profile (name editable, email read-only), Body Metrics (mock, coming soon), Goals (mock, coming soon). Save button only active when name is changed.
+- **`DropdownMenu`**: `position: fixed` anchored via `getBoundingClientRect()`. Framer Motion scale+fade from top-right (`scale 0.95→1, opacity 0→1, y -6→0`, 150ms). `z-50` (above navbar `z-30` and drawer `z-40`).
+- `ThemeToggle` component is still present but no longer rendered in the navbar — theme is toggled via the dropdown.
 
 ## Environment Variables (.env)
 

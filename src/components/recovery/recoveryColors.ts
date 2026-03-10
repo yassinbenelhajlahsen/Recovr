@@ -16,9 +16,10 @@ export function getRecoveryStatus(pct: number): RecoveryStatus {
  */
 export function getRecoveryFill(pct: number, isDark: boolean): string {
   // Anchors: [hue, saturation, lightness]
-  const red = isDark ? [3, 62, 55] : [3, 62, 44];
-  const yellow = isDark ? [43, 70, 52] : [43, 70, 38];
-  const green = isDark ? [152, 38, 44] : [152, 42, 32];
+  // Light mode: higher lightness + lower saturation → muted earthy tones on warm off-white
+  const red = isDark ? [3, 62, 55] : [5, 48, 60];
+  const yellow = isDark ? [43, 70, 52] : [40, 55, 58];
+  const green = isDark ? [152, 38, 44] : [150, 35, 50];
 
   let h: number, s: number, l: number;
 

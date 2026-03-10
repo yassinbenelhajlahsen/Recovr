@@ -16,9 +16,10 @@
   --c-accent-hover: #B84722;
   --c-border: #DDDDD7;
   --c-border-subtle: #E8E8E3;
-  --c-danger: #C53030;
-  --c-success: #2D6A4F;
-  --c-recovery-yellow: #B8860B;
+  /* Match hue/sat of SVG fill anchors; darker lightness for readable text */
+  --c-danger: hsl(5, 48%, 42%);
+  --c-success: hsl(150, 35%, 36%);
+  --c-recovery-yellow: hsl(40, 55%, 38%);
 }
 
 .dark {
