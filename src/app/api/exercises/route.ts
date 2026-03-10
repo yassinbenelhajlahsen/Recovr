@@ -11,13 +11,38 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q") ?? "";
 
-  const exercises = await prisma.exercise.findMany({
-    where: {
-      OR: [{ user_id: null }, { user_id: userId }],
-      ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
-    },
-    orderBy: [{ user_id: "asc" }, { name: "asc" }],
-  });
+  type ExerciseRow = {
+    id: string;
+    name: string;
+    muscle_groups: string[];
+    equipment: string | null;
+    user_id: string | null;
+  };
+
+  let exercises: ExerciseRow[];
+
+  if (q) {
+    // Use raw SQL so we can do partial ILIKE matching on both name and array elements.
+    // EXISTS + unnest lets us check if any muscle group contains the search term.
+    exercises = await prisma.$queryRaw<ExerciseRow[]>`
+      SELECT id, name, muscle_groups, equipment, user_id
+      FROM "Exercise"
+      WHERE (user_id IS NULL OR user_id = ${userId}::uuid)
+        AND (
+          name ILIKE ${"%" + q + "%"}
+          OR EXISTS (
+            SELECT 1 FROM unnest(muscle_groups) AS mg
+            WHERE mg ILIKE ${"%" + q + "%"}
+          )
+        )
+      ORDER BY user_id ASC NULLS FIRST, name ASC
+    `;
+  } else {
+    exercises = await prisma.exercise.findMany({
+      where: { OR: [{ user_id: null }, { user_id: userId }] },
+      orderBy: [{ user_id: "asc" }, { name: "asc" }],
+    });
+  }
 
   return NextResponse.json(exercises);
 }
