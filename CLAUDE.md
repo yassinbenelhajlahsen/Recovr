@@ -156,7 +156,8 @@ src/
 │   │   └── hooks/
 │   │       ├── useWorkoutDetail.ts  # Fetch-on-open logic for the drawer
 │   │       ├── useExerciseSearch.ts # Search state, debounce, cache, outside-click
-│   │       └── useExerciseList.ts   # Exercise/set CRUD state
+│   │       ├── useExerciseList.ts   # Exercise/set CRUD state
+│   │       └── useWorkoutForm.ts    # Form state (date/notes/duration/saving/error), handleSubmit, createCustomExercise
 │   ├── recovery/
 │   │   ├── RecoveryPanel.tsx   # Dashboard sidebar: dual body maps + status list
 │   │   ├── RecoveryView.tsx    # Full-page recovery view
@@ -164,10 +165,14 @@ src/
 │   │   ├── BodyMapFront.tsx    # Front SVG body map (uses @mjcdev/react-body-highlighter)
 │   │   ├── BodyMapBack.tsx     # Back SVG body map
 │   │   ├── MuscleDetailPanel.tsx # Tap-to-inspect muscle stats panel
-│   │   └── recoveryColors.ts  # HSL fill interpolation + status color/label maps
+│   │   ├── recoveryColors.ts  # HSL fill interpolation, status color/label maps, buildBodyMapCss
+│   │   └── hooks/
+│   │       └── useRecoverySelection.ts # selectedMuscle state, handleSelect toggle, muscleMap, status counts
 │   ├── layout/
 │   │   ├── Navbar.tsx          # Top nav bar (logo, nav links, avatar button)
 │   │   ├── UserMenu.tsx        # Avatar dropdown: theme toggle, settings, sign out
+│   │   └── hooks/
+│   │       └── useNavbar.ts    # Auth subscription, profile fetch, menu/settings state, handleSignOut
 │   │   ├── ThemeProvider.tsx   # Theme context + useTheme hook
 │   │   ├── ThemeToggle.tsx     # Theme toggle button
 │   │   └── PageTransition.tsx  # Zone-based page transition animations
@@ -177,19 +182,21 @@ src/
 │   ├── settings/
 │   │   ├── SettingsDrawer.tsx  # Settings drawer: profile, body metrics, goals (all functional)
 │   │   ├── AccountTab.tsx      # Profile + account deletion tab (uses colocated hooks)
-│   │   ├── FitnessTab.tsx      # Body metrics + goals tab
+│   │   ├── FitnessTab.tsx      # Body metrics + goals tab (uses useFitnessForm + GoalSelector)
 │   │   ├── SectionHeader.tsx   # Shared section header component
 │   │   └── hooks/
 │   │       ├── useProfileSave.ts    # name state, dirty check, handleSaveProfile
 │   │       ├── usePasswordReset.ts  # all password state + handleResetPassword
-│   │       └── useDeleteAccount.ts  # confirm/deleting state + handleDeleteAccount
+│   │       ├── useDeleteAccount.ts  # confirm/deleting state + handleDeleteAccount
+│   │       └── useFitnessForm.ts    # unitSystem/height/weight/goals state, dirty check, handleSaveFitness
 │   └── ui/
 │       ├── Modal.tsx
 │       ├── Drawer.tsx          # flushSync on open to fix first-open animation (React 18)
 │       ├── DropdownMenu.tsx    # Portal dropdown: DropdownMenu, DropdownMenuItem, DropdownMenuDivider
 │       ├── FloatingInput.tsx   # Floating label input component
 │       ├── PasswordChecklist.tsx # Password validation checklist
-│       └── icons.tsx           # Shared SVG icons: EyeIcon, EyeOffIcon (named exports)
+│       ├── GoalSelector.tsx    # Shared goal pills grid + optional "or" divider + custom goal input; exports GOALS const
+│       └── icons.tsx           # Shared SVG icons: EyeIcon, EyeOffIcon, SunIcon, MoonIcon, SettingsIcon, SignOutIcon
 ├── store/
 │   ├── workoutStore.ts         # Drawer state (isDrawerOpen, drawerView, openDrawer, closeDrawer, setDrawerView)
 │   ├── appStore.ts             # App-wide state (isOnboarding flag)
