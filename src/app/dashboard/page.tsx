@@ -62,8 +62,21 @@ export default async function DashboardPage({
               workout_exercises: {
                 some: {
                   exercise: {
-                    ...(search ? { name: { contains: search, mode: "insensitive" } } : {}),
-                    ...(muscles.length ? { muscle_groups: { hasSome: muscles } } : {}),
+                    AND: [
+                      ...(search
+                        ? [
+                            {
+                              OR: [
+                                { name: { contains: search, mode: "insensitive" as const } },
+                                { muscle_groups: { hasSome: [search.toLowerCase()] } },
+                              ],
+                            },
+                          ]
+                        : []),
+                      ...(muscles.length
+                        ? [{ muscle_groups: { hasSome: muscles } }]
+                        : []),
+                    ],
                   },
                 },
               },
