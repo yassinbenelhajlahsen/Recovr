@@ -3,11 +3,87 @@
 /* Enable class-based dark mode */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ─── Design tokens ─── */
+
+:root {
+  --c-bg: #F7F7F4;
+  --c-surface: #EEEEE9;
+  --c-elevated: #FFFFFF;
+  --c-text: #111110;
+  --c-text-2: #5C5C57;
+  --c-text-3: #8A8A84;
+  --c-accent: #D4552A;
+  --c-accent-hover: #B84722;
+  --c-border: #DDDDD7;
+  --c-border-subtle: #E8E8E3;
+  --c-danger: #C53030;
+  --c-success: #2D6A4F;
+}
+
+.dark {
+  --c-bg: #0B0B0A;
+  --c-surface: #151514;
+  --c-elevated: #1E1E1C;
+  --c-text: #F0F0EB;
+  --c-text-2: #9E9E98;
+  --c-text-3: #6B6B66;
+  --c-accent: #E8633A;
+  --c-accent-hover: #F07A52;
+  --c-border: #282825;
+  --c-border-subtle: #1E1E1C;
+  --c-danger: #E53E3E;
+  --c-success: #40916C;
+}
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
+
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-elevated: var(--c-elevated);
+  --color-primary: var(--c-text);
+  --color-secondary: var(--c-text-2);
+  --color-muted: var(--c-text-3);
+  --color-accent: var(--c-accent);
+  --color-accent-hover: var(--c-accent-hover);
+  --color-border: var(--c-border);
+  --color-border-subtle: var(--c-border-subtle);
+  --color-danger: var(--c-danger);
+  --color-success: var(--c-success);
 }
 
+/* ─── Display font tuning ─── */
+
+.font-display {
+  font-variation-settings: "WONK" 1, "SOFT" 50;
+  font-style: oblique 5deg;
+}
+
+/* ─── Base styles ─── */
+
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--c-bg);
+  color: var(--c-text);
+}
+
+/* Smooth scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-border) transparent;
+}
+
+/* Date inputs: match color scheme to theme */
+:root input[type="date"] {
+  color-scheme: light;
+}
+.dark input[type="date"] {
+  color-scheme: dark;
+}
+
+/* Selection color */
+::selection {
+  background-color: var(--c-accent);
+  color: white;
 }
