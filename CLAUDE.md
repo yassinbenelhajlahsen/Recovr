@@ -26,15 +26,36 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 - After `signInWithPassword`, call `ensureUserInDb(user)` from `@/lib/supabase/ensure-user` to sync user to Prisma DB
 - OAuth and email confirmation flows sync user via `src/app/auth/callback/route.ts`
 - **Google OAuth is configured** in Supabase dashboard (enabled, redirect URL set)
+- **Asymmetric JWT signing keys (RS256)** are enabled in Supabase dashboard
+
+### `getClaims()` vs `getUser()` strategy
+
+- **Read-only endpoints** (GET routes, middleware, server components) use `supabase.auth.getClaims()` — verifies the JWT locally using cached JWKS public keys (no HTTP round-trip to Supabase auth server, <1ms vs ~50-200ms)
+- **Mutations** (POST, PUT, DELETE) use `supabase.auth.getUser()` — validates the session server-side, ensuring revoked sessions can't modify data
+- **Client components** (e.g., Navbar) use `getUser()` on the browser client — this reads from the local session, not a server call, so it's fine
+- `getClaims()` returns `{ data: { claims, header, signature }, error }` — extract user ID via `claims.claims.sub` and email via `claims.claims.email`
+- `getClaims()` still fully verifies JWT signature — a forged or expired token will fail. The only difference from `getUser()` is it won't catch server-side session revocations (e.g., manually banning a user from the Supabase dashboard). Revoked users can still read data until their JWT expires (default 1 hour).
+- **Prerequisite**: asymmetric JWT keys must be enabled in Supabase dashboard (Settings > Auth > Signing Keys). The `@supabase/ssr` client auto-fetches the public key from `https://<project-ref>.supabase.co/.well-known/jwks.json` — no env vars needed.
 
 ## Database
 
 - Prisma v7 config lives in `prisma.config.ts` (reads `.env`)
-- `DATABASE_URL` = pooled connection (port 6543, for runtime)
+- `DATABASE_URL` = pooled connection (port 6543, `?pgbouncer=true`, for runtime)
 - `DIRECT_URL` = direct connection (port 5432, for migrations)
 - Prisma client is imported from `@/generated/prisma/client` (NOT `@prisma/client`)
 - Prisma v7 requires a driver adapter: `new PrismaClient({ adapter: new PrismaPg({ connectionString: DATABASE_URL }) })`
 - Singleton pattern in `src/lib/prisma.ts`
+
+### Connection pooling
+
+- **PgBouncer** (`?pgbouncer=true` on `DATABASE_URL`): Supabase's connection proxy on port 6543. Reuses pre-established Postgres connections instead of creating new ones per request (~5ms vs ~50-100ms cold connect). Also prevents connection exhaustion under concurrent serverless invocations (Postgres default limit ~100).
+- **PrismaPg pool** (`src/lib/prisma.ts`): application-level pool with `max: 3` (right-sized for serverless — each instance gets its own pool), `connectionTimeoutMillis: 5000` (fail fast instead of hanging), `idleTimeoutMillis: 30000` (clean up idle connections).
+
+### Query optimization
+
+- Prefer `select` over `include` to reduce data transfer — only fetch columns the frontend actually uses
+- Example: `sets: { select: { id: true, set_number: true, reps: true, weight: true } }` instead of `sets: true` (avoids sending `workout_exercise_id`, `created_at`, etc.)
+- For the workout list (dashboard), only `{ id: true }` is needed for sets (just counting them)
 
 ## Design System
 
