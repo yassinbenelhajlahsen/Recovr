@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FloatingInput } from "@/components/ui/FloatingInput";
-import { MetricsInputs } from "@/components/MetricsInputs";
+import { MetricsInputs } from "@/components/onboarding/MetricsInputs";
 import { SectionHeader } from "./SectionHeader";
 import type { UnitSystem } from "@/types/user";
 import {

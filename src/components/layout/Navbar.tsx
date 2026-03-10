@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAppStore } from "@/store/appStore";
 import { UserMenu } from "./UserMenu";
-import { SettingsDrawer } from "./settings/SettingsDrawer";
+import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import type { User } from "@supabase/supabase-js";
 
 function getInitials(name?: string | null, email?: string): string {

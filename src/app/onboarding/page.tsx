@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import { OnboardingFlow } from "@/components/OnboardingFlow";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
 export default async function OnboardingPage() {
   const supabase = await createClient();

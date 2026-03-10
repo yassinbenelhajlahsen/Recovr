@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { FloatingInput } from "@/components/ui/FloatingInput";
-import { MetricsInputs } from "@/components/MetricsInputs";
+import { MetricsInputs } from "./MetricsInputs";
 import { useAppStore } from "@/store/appStore";
 import type { UnitSystem } from "@/types/user";
 import { resolveHeightToInches, resolveWeightToLbs } from "@/lib/units";
