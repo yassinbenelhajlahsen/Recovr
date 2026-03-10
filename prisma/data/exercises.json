@@ -89,5 +89,7 @@
   { "name": "Russian Twist", "muscle_groups": ["core"], "equipment": "bodyweight" },
   { "name": "Decline Sit-Up", "muscle_groups": ["core"], "equipment": "bodyweight" },
   { "name": "Side Plank", "muscle_groups": ["core"], "equipment": "bodyweight" },
-  { "name": "Dead Bug", "muscle_groups": ["core"], "equipment": "bodyweight" }
+  { "name": "Dead Bug", "muscle_groups": ["core"], "equipment": "bodyweight" },
+  { "name": "Tibialis Raise", "muscle_groups": ["tibialis"], "equipment": "bodyweight" },
+  { "name": "Weighted Tibialis Raise", "muscle_groups": ["tibialis"], "equipment": "dumbbell" }
 ]
