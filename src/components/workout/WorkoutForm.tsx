@@ -4,53 +4,15 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-type SetEntry = { id: string; set_number: number; reps: string; weight: string };
-type ExerciseEntry = {
-  id: string;
-  exercise_id: string;
-  exercise_name: string;
-  muscle_groups: string[];
-  order: number;
-  sets: SetEntry[];
-};
-type Exercise = {
-  id: string;
-  name: string;
-  muscle_groups: string[];
-  equipment: string | null;
-  user_id: string | null;
-};
+import type {
+  SetEntry,
+  ExerciseEntry,
+  Exercise,
+  WorkoutFormInitialData,
+  WorkoutFormProps as Props,
+} from "@/types/workout";
 
-export type WorkoutFormInitialData = {
-  date: string;
-  notes: string | null;
-  duration_minutes: number | null;
-  exercises: {
-    exercise_id: string;
-    exercise_name: string;
-    muscle_groups: string[];
-    order: number;
-    sets: { set_number: number; reps: number; weight: number }[];
-  }[];
-};
-
-type Props = {
-  workoutId?: string;
-  initialData?: WorkoutFormInitialData;
-  onSave?: (data: {
-    id: string;
-    date: string;
-    duration_minutes: number | null;
-    notes: string | null;
-    workout_exercises: {
-      id: string;
-      exercise: { id: string; name: string; muscle_groups: string[] };
-      sets: { id: string; set_number: number; reps: number; weight: number }[];
-    }[];
-  }) => void;
-  onCancel?: () => void;
-  compact?: boolean;
-};
+export type { WorkoutFormInitialData } from "@/types/workout";
 
 let _uid = 0;
 const uid = () => `local-${++_uid}`;
@@ -61,11 +23,11 @@ export function WorkoutForm({ workoutId, initialData, onSave, onCancel, compact 
 
   const [date, setDate] = useState(() => {
     if (initialData?.date) return initialData.date;
-    // Build YYYY-MM-DD from UTC to avoid hydration mismatch
+    // Build YYYY-MM-DD using local date so the default matches the user's calendar day
     const d = new Date();
-    const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(d.getUTCDate()).padStart(2, "0");
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   });
   const [notes, setNotes] = useState(initialData?.notes ?? "");
@@ -324,8 +286,38 @@ export function WorkoutForm({ workoutId, initialData, onSave, onCancel, compact 
     }
   }
 
+  const actionButtons = (
+    <div className="flex items-center gap-4">
+      <button
+        onClick={handleSubmit}
+        disabled={saving}
+        className="bg-accent text-white text-sm font-semibold rounded-lg px-6 py-3 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {saving ? "Saving…" : isEdit ? "Save Changes" : "Log Workout"}
+      </button>
+      {onCancel ? (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-sm font-medium text-secondary hover:text-primary transition-colors"
+        >
+          Cancel
+        </button>
+      ) : (
+        <Link
+          href={isEdit ? `/workouts/${workoutId}` : "/workouts"}
+          className="text-sm font-medium text-secondary hover:text-primary transition-colors"
+        >
+          Cancel
+        </Link>
+      )}
+    </div>
+  );
+
   return (
     <div className={compact ? "space-y-5" : "space-y-8"}>
+      {isEdit && actionButtons}
+
       {/* Details */}
       <div className={compact ? "space-y-4" : "rounded-xl bg-surface border border-border-subtle p-6 space-y-5"}>
         <p className="text-xs font-semibold text-muted uppercase tracking-wider">
@@ -635,32 +627,7 @@ export function WorkoutForm({ workoutId, initialData, onSave, onCancel, compact 
 
       {error && <p className="text-sm text-danger font-medium">{error}</p>}
 
-      {/* Actions */}
-      <div className="flex items-center gap-4 pt-2">
-        <button
-          onClick={handleSubmit}
-          disabled={saving}
-          className="bg-accent text-white text-sm font-semibold rounded-lg px-6 py-3 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {saving ? "Saving…" : isEdit ? "Save Changes" : "Log Workout"}
-        </button>
-        {onCancel ? (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="text-sm font-medium text-secondary hover:text-primary transition-colors"
-          >
-            Cancel
-          </button>
-        ) : (
-          <Link
-            href={isEdit ? `/workouts/${workoutId}` : "/workouts"}
-            className="text-sm font-medium text-secondary hover:text-primary transition-colors"
-          >
-            Cancel
-          </Link>
-        )}
-      </div>
+      {!isEdit && actionButtons}
     </div>
   );
 }

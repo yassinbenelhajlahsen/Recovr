@@ -3,14 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-
-interface DropdownMenuProps {
-  open: boolean;
-  onClose: () => void;
-  anchorRef: React.RefObject<HTMLElement | null>;
-  children: React.ReactNode;
-  align?: "left" | "right";
-}
+import type { DropdownMenuProps } from "@/types/ui";
 
 export function DropdownMenu({
   open,

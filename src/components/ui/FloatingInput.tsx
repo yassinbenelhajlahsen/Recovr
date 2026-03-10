@@ -1,30 +1,6 @@
 // src/components/ui/FloatingInput.tsx
 import React from "react";
-
-type FloatingInputProps = {
-  id: string;
-  type: "text" | "email" | "password" | "date";
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  label: string;
-  leftIcon?: React.ReactNode;
-  rightSlot?: React.ReactNode;
-  inputRef?: React.RefObject<HTMLInputElement>;
-  autoComplete?: string;
-  minLength?: number;
-  required?: boolean;
-  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
-  autoCapitalize?: "none" | "sentences" | "words" | "characters";
-  autoCorrect?: "on" | "off";
-  spellCheck?: boolean;
-  disabled?: boolean;
-  className?: string;
-  error?: string;
-  // Visual customizations (optional — CSS variable names preferred)
-  focusColor?: string;
-  borderColor?: string;
-  labelColor?: string;
-};
+import type { FloatingInputProps } from "@/types/ui";
 
 export function FloatingInput({
   id,
@@ -75,7 +51,9 @@ export function FloatingInput({
         disabled={disabled}
         className={`peer w-full ${leftIcon ? "pl-10" : "pl-4"} ${
           rightSlot ? "pr-10" : "pr-4"
-        } pt-6 pb-3 rounded-xl transition-all duration-200`}
+        } pt-6 pb-3 rounded-xl transition-all duration-200 ${
+          disabled ? "opacity-50 cursor-not-allowed" : ""
+        }`}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         style={{

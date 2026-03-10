@@ -23,7 +23,8 @@ function formatDate(isoDate: string): string {
   const d = new Date(isoDate);
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${weekdays[d.getUTCDay()]}, ${months[d.getUTCMonth()]} ${d.getUTCDate()}`;
+  // Use local date methods so the displayed day matches the user's calendar
+  return `${weekdays[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
 }
 
 function formatVolume(lbs: number): string {
@@ -103,7 +104,7 @@ export function MuscleDetailPanel({ recovery, onClose }: Props) {
             <p className="text-xs text-muted uppercase tracking-widest mb-1">Last trained</p>
             <p className="text-sm text-primary font-medium">{clientNow ? formatRelativeTime(lastTrainedAt, clientNow) : formatDate(lastTrainedAt)}</p>
             
-            <p className="text-xs text-secondary">{formatDate(lastTrainedAt)}</p>
+            {clientNow && <p className="text-xs text-secondary">{formatDate(lastTrainedAt)}</p>}
           </div>
 
           {/* Volume stats */}

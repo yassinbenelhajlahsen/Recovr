@@ -6,16 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuDivider,
 } from "@/components/ui/DropdownMenu";
-import type { User } from "@supabase/supabase-js";
-
-interface UserMenuProps {
-  open: boolean;
-  onClose: () => void;
-  anchorRef: React.RefObject<HTMLElement | null>;
-  user: User;
-  onOpenSettings: () => void;
-  onSignOut: () => void;
-}
+import type { UserMenuProps } from "@/types/ui";
 
 const SunIcon = () => (
   <svg
@@ -93,6 +84,7 @@ export function UserMenu({
   user,
   onOpenSettings,
   onSignOut,
+  onboarding,
 }: UserMenuProps) {
   const { theme, toggleTheme } = useTheme();
 
@@ -111,16 +103,18 @@ export function UserMenu({
         {theme === "dark" ? "Light mode" : "Dark mode"}
       </DropdownMenuItem>
 
-      {/* Settings */}
-      <DropdownMenuItem
-        onClick={() => {
-          onOpenSettings();
-          onClose();
-        }}
-      >
-        <SettingsIcon />
-        Settings
-      </DropdownMenuItem>
+      {/* Settings — hidden during onboarding */}
+      {!onboarding && (
+        <DropdownMenuItem
+          onClick={() => {
+            onOpenSettings();
+            onClose();
+          }}
+        >
+          <SettingsIcon />
+          Settings
+        </DropdownMenuItem>
+      )}
 
       <DropdownMenuDivider />
 

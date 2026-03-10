@@ -4,6 +4,7 @@
 const requirements = [
   { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
   { label: "One uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
+  { label: "One lowercase letter", test: (p: string) => /[a-z]/.test(p) },
   { label: "One number", test: (p: string) => /[0-9]/.test(p) },
   {
     label: "One special character",
@@ -12,11 +13,12 @@ const requirements = [
 ];
 
 export function passwordMeetsRequirements(password: string): boolean {
-  return requirements.every(({ test }) => test(password));
+  return requirements.every(({ test }) => test(password)) && !/\s/.test(password);
 }
 
 export function PasswordChecklist({ password }: { password: string }) {
   return (
+  <>
     <ul className="space-y-1.5">
       {requirements.map(({ label, test }) => {
         const met = password.length > 0 && test(password);
@@ -62,5 +64,9 @@ export function PasswordChecklist({ password }: { password: string }) {
         );
       })}
     </ul>
+    {password.includes(" ") && (
+      <p className="text-xs text-danger mt-1.5">Password cannot contain spaces</p>
+    )}
+  </>
   );
 }

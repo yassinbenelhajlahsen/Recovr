@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useAppStore } from "@/store/appStore";
 import { UserMenu } from "./UserMenu";
-import { SettingsDrawer } from "./SettingsDrawer";
+import { SettingsDrawer } from "./settings/SettingsDrawer";
 import type { User } from "@supabase/supabase-js";
 
 function getInitials(name?: string | null, email?: string): string {
@@ -19,9 +20,18 @@ function getInitials(name?: string | null, email?: string): string {
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
+  const isOnboarding = useAppStore((s) => s.isOnboarding) || pathname === "/onboarding";
+  const isAuthPage = pathname.startsWith("/auth");
+  const showNavLinks = !isOnboarding && !isAuthPage;
   const [user, setUser] = useState<User | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profile, setProfile] = useState<{
+    name?: string | null;
+    height_inches?: number | null;
+    weight_lbs?: number | null;
+    fitness_goals?: string[];
+  } | null>(null);
   const avatarRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -34,6 +44,15 @@ export function Navbar() {
     );
     return () => subscription.unsubscribe();
   }, []);
+
+  // Fetch profile when settings drawer opens
+  useEffect(() => {
+    if (settingsOpen) {
+      fetch("/api/user/profile")
+        .then((r) => r.json())
+        .then(setProfile);
+    }
+  }, [settingsOpen]);
 
   // Close dropdown on any navigation by including pathname in the key state
   const [menuPath, setMenuPath] = useState(pathname);
@@ -56,15 +75,21 @@ export function Navbar() {
     <>
       <nav className="border-b border-border bg-bg/80 backdrop-blur-md sticky top-0 z-30">
         <div className="px-4 sm:px-8 h-16 flex items-center justify-between relative">
-          <Link
-            href={user ? "/dashboard" : "/auth/signin"}
-            className="font-display text-xl text-primary tracking-tight"
-          >
-            Recovr
-          </Link>
+          {isOnboarding ? (
+            <span className="font-display text-xl text-primary tracking-tight">
+              Recovr
+            </span>
+          ) : (
+            <Link
+              href={user ? "/dashboard" : "/auth/signin"}
+              className="font-display text-xl text-primary tracking-tight"
+            >
+              Recovr
+            </Link>
+          )}
 
           <div className="absolute right-2 flex items-center gap-1">
-            {user && (
+            {user && showNavLinks && (
               <Link
                 href="/recovery"
                 className="text-sm font-medium text-muted hover:text-primary px-3 py-2 rounded-lg hover:bg-surface transition-colors"
@@ -96,15 +121,23 @@ export function Navbar() {
             user={user}
             onOpenSettings={() => setSettingsOpen(true)}
             onSignOut={handleSignOut}
+            onboarding={isOnboarding}
           />
-          <SettingsDrawer
+          {showNavLinks && <SettingsDrawer
             open={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
+            onClose={() => {
+              setSettingsOpen(false);
+              setProfile(null);
+            }}
             user={{
               email: user.email ?? "",
-              name: displayName ?? null,
+              name: profile?.name ?? displayName ?? null,
+              height_inches: profile?.height_inches ?? null,
+              weight_lbs: profile?.weight_lbs ?? null,
+              fitness_goals: profile?.fitness_goals ?? [],
+              providers: user.app_metadata?.providers ?? [],
             }}
-          />
+          />}
         </>
       )}
     </>

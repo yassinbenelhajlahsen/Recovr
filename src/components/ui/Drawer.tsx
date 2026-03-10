@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-
-interface DrawerProps {
-  open: boolean;
-  onClose: () => void;
-  title?: string;
-  children: React.ReactNode;
-}
+import type { DrawerProps } from "@/types/ui";
 
 export function Drawer({ open, onClose, title, children }: DrawerProps) {
   const [mounted, setMounted] = useState(false);

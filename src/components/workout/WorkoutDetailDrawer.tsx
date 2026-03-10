@@ -5,18 +5,8 @@ import { useRouter } from "next/navigation";
 import { Drawer } from "@/components/ui/Drawer";
 import { DeleteWorkoutButton } from "@/components/workout/DeleteWorkoutButton";
 import { WorkoutForm } from "@/components/workout/WorkoutForm";
-import { useWorkoutStore, SessionSummaryData } from "@/store/workoutStore";
-
-type SetData = { id: string; set_number: number; reps: number; weight: number };
-type ExerciseData = { id: string; name: string; muscle_groups: string[] };
-type WorkoutExerciseData = { id: string; exercise: ExerciseData; order: number; sets: SetData[] };
-type WorkoutDetail = {
-  id: string;
-  date: string;
-  duration_minutes: number | null;
-  notes: string | null;
-  workout_exercises: WorkoutExerciseData[];
-};
+import { useWorkoutStore } from "@/store/workoutStore";
+import type { SessionSummaryData, WorkoutDetail } from "@/types/workout";
 
 function formatDate(dateStr: string) {
   return new Intl.DateTimeFormat("en-US", {
