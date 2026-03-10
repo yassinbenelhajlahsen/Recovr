@@ -11,8 +11,6 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"]!,
-    // @ts-expect-error -- directUrl not yet in types but required by Prisma 7 at runtime
-    directUrl: process.env["DIRECT_URL"],
+    url: process.env["DIRECT_URL"]!,
   },
 });
