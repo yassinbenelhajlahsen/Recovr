@@ -1,16 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import type { MuscleRecovery } from "@/types/recovery";
 
-export type MuscleRecovery = {
-  muscle: string;
-  recoveryPct: number; // 0–1
-  status: "recovered" | "partial" | "fatigued";
-  lastTrainedAt: string | null; // ISO date string
-  hoursSince: number | null;
-  lastSessionVolume: number | null; // total lbs
-  lastSessionSets: number | null;
-  lastSessionReps: number | null;
-  lastSessionExercises: string[];
-};
+export type { MuscleRecovery };
 
 export const MUSCLE_GROUPS = [
   "chest",
@@ -34,6 +25,8 @@ export const MUSCLE_GROUPS = [
 const BASE_RECOVERY_HOURS = 48;
 const VOLUME_THRESHOLD = 5000; // lbs — "normal" session volume for a muscle group
 const WINDOW_HOURS = 96; // how far back to look for workouts
+// Proxy weight (lbs) applied per rep when a set has weight = 0 (bodyweight exercises)
+const BODYWEIGHT_PROXY = 75;
 
 function clamp(val: number, min: number, max: number) {
   return Math.max(min, Math.min(max, val));
@@ -68,12 +61,13 @@ export async function calculateRecovery(userId: string): Promise<MuscleRecovery[
     orderBy: { date: "desc" },
   });
 
-  // Build per-muscle data: track the worst fatigue across all workouts
-  // Each workout contributes independently; we keep the worst (lowest pct)
+  // Build per-muscle data: accumulate residual fatigue across all workouts in window.
+  // Workouts are ordered desc, so the first time a muscle is encountered = most recent session.
   const muscleData = new Map<
     string,
     {
       recoveryPct: number;
+      residualFatigue: number; // accumulated (1 - pct) across all workouts
       lastTrainedAt: string;
       hoursSince: number;
       lastSessionVolume: number;
@@ -84,8 +78,15 @@ export async function calculateRecovery(userId: string): Promise<MuscleRecovery[
   >();
 
   for (const workout of workouts) {
-    const workoutDate = new Date(workout.date);
-    const hoursSince = (now.getTime() - workoutDate.getTime()) / (1000 * 60 * 60);
+    // workout.date is already a Date from Prisma — no need for new Date()
+    // Old workouts stored as midnight UTC appear artificially old; shift to noon for accurate recovery
+    const workoutTime =
+      workout.date.getUTCHours() === 0 &&
+      workout.date.getUTCMinutes() === 0 &&
+      workout.date.getUTCSeconds() === 0
+        ? new Date(workout.date.getTime() + 12 * 60 * 60 * 1000)
+        : workout.date;
+    const hoursSince = (now.getTime() - workoutTime.getTime()) / (1000 * 60 * 60);
 
     // Aggregate volume and exercises per muscle group within this workout
     const muscleVolume = new Map<string, number>();
@@ -95,43 +96,53 @@ export async function calculateRecovery(userId: string): Promise<MuscleRecovery[
 
     for (const we of workout.workout_exercises) {
       const { muscle_groups, name } = we.exercise;
-      const exerciseVolume = we.sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
+      // Use BODYWEIGHT_PROXY for sets logged with weight = 0 (bodyweight exercises)
+      const exerciseVolume = we.sets.reduce(
+        (sum, s) => sum + s.reps * (s.weight > 0 ? s.weight : BODYWEIGHT_PROXY),
+        0,
+      );
       const exerciseSets = we.sets.length;
       const exerciseReps = we.sets.reduce((sum, s) => sum + s.reps, 0);
 
       for (const muscle of muscle_groups) {
-        muscleVolume.set(muscle, (muscleVolume.get(muscle) ?? 0) + exerciseVolume);
-        muscleSets.set(muscle, (muscleSets.get(muscle) ?? 0) + exerciseSets);
-        muscleReps.set(muscle, (muscleReps.get(muscle) ?? 0) + exerciseReps);
-        const exList = muscleExercises.get(muscle) ?? [];
+        // Normalize to lowercase to match MUSCLE_GROUPS keys regardless of DB casing
+        const m = muscle.toLowerCase();
+        muscleVolume.set(m, (muscleVolume.get(m) ?? 0) + exerciseVolume);
+        muscleSets.set(m, (muscleSets.get(m) ?? 0) + exerciseSets);
+        muscleReps.set(m, (muscleReps.get(m) ?? 0) + exerciseReps);
+        const exList = muscleExercises.get(m) ?? [];
         if (!exList.includes(name)) exList.push(name);
-        muscleExercises.set(muscle, exList);
+        muscleExercises.set(m, exList);
       }
     }
 
-    // Compute recovery pct per muscle for this workout
+    // Compute recovery pct per muscle for this workout and accumulate fatigue
     for (const [muscle, volume] of muscleVolume) {
       const volumeFactor = clamp(volume / VOLUME_THRESHOLD, 0.8, 1.5);
       const adjustedHours = BASE_RECOVERY_HOURS * volumeFactor;
       const recoveryPct = clamp(hoursSince / adjustedHours, 0, 1);
 
       const existing = muscleData.get(muscle);
-      // Keep the worst (most fatigued) result across workouts
-      if (!existing || recoveryPct < existing.recoveryPct) {
-        muscleData.set(muscle, {
-          recoveryPct,
-          lastTrainedAt: workout.date.toISOString(),
-          hoursSince,
-          lastSessionVolume: muscleVolume.get(muscle) ?? 0,
-          lastSessionSets: muscleSets.get(muscle) ?? 0,
-          lastSessionReps: muscleReps.get(muscle) ?? 0,
-          lastSessionExercises: muscleExercises.get(muscle) ?? [],
-        });
-      }
+      // Accumulate residual fatigue: each workout's (1 - pct) adds to the total.
+      // Combined pct = 1 - sum(residuals), floored at 0.
+      const totalResidualFatigue = (existing?.residualFatigue ?? 0) + (1 - recoveryPct);
+      const combinedPct = clamp(1 - totalResidualFatigue, 0, 1);
+
+      muscleData.set(muscle, {
+        recoveryPct: combinedPct,
+        residualFatigue: totalResidualFatigue,
+        // Workouts are desc — first encounter is the most recent session
+        lastTrainedAt: existing?.lastTrainedAt ?? workout.date.toISOString(),
+        hoursSince: existing?.hoursSince ?? hoursSince,
+        lastSessionVolume: existing?.lastSessionVolume ?? (muscleVolume.get(muscle) ?? 0),
+        lastSessionSets: existing?.lastSessionSets ?? (muscleSets.get(muscle) ?? 0),
+        lastSessionReps: existing?.lastSessionReps ?? (muscleReps.get(muscle) ?? 0),
+        lastSessionExercises: existing?.lastSessionExercises ?? (muscleExercises.get(muscle) ?? []),
+      });
     }
   }
 
-  // Return all 15 muscle groups, defaulting to fully recovered if untrained
+  // Return all muscle groups, defaulting to fully recovered if untrained
   return MUSCLE_GROUPS.map((muscle) => {
     const data = muscleData.get(muscle);
     if (!data) {
