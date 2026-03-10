@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import type { Exercise as ExerciseRow } from "@/types/workout";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -10,14 +11,6 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q") ?? "";
-
-  type ExerciseRow = {
-    id: string;
-    name: string;
-    muscle_groups: string[];
-    equipment: string | null;
-    user_id: string | null;
-  };
 
   let exercises: ExerciseRow[];
 

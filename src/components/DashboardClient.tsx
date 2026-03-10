@@ -7,24 +7,7 @@ import { WorkoutDetailDrawer } from "@/components/workout/WorkoutDetailDrawer";
 import { SessionSummaryModal } from "@/components/workout/SessionSummaryModal";
 import { WorkoutsFilter } from "@/components/workout/WorkoutsFilter";
 import { RecoveryPanel } from "@/components/recovery/RecoveryPanel";
-import type { MuscleRecovery } from "@/lib/recovery";
-
-type Workout = {
-  id: string;
-  date: string;
-  dateFormatted: string;
-  durationMinutes: number | null;
-  notes: string | null;
-  exerciseNames: string[];
-  totalSets: number;
-};
-
-type Props = {
-  displayName: string | null | undefined;
-  workouts: Workout[];
-  hasFilters: boolean;
-  recovery: MuscleRecovery[];
-};
+import type { DashboardClientProps as Props } from "@/types/workout";
 
 export function DashboardClient({ displayName, workouts, hasFilters, recovery }: Props) {
   const openModal = useWorkoutStore((s) => s.openModal);

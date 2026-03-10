@@ -4,11 +4,7 @@ import Body, { type Slug } from "@mjcdev/react-body-highlighter";
 import { getRecoveryFill, getNeutralFill } from "./recoveryColors";
 import { useEffect } from "react";
 import { useClientStore } from "@/store/clientStore";
-
-type BodyMapProps = {
-  muscles: Record<string, { recoveryPct: number } | undefined>;
-  onSelectMuscle: (muscle: string) => void;
-};
+import type { BodyMapProps } from "@/types/recovery";
 
 // Map from our app's muscle names to library slugs (back-visible muscles)
 const BACK_MUSCLE_MAP: Array<{ muscle: string; slug: Slug }> = [

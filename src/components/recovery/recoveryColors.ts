@@ -1,4 +1,5 @@
-export type RecoveryStatus = "recovered" | "partial" | "fatigued";
+import type { RecoveryStatus } from "@/types/recovery";
+export type { RecoveryStatus } from "@/types/recovery";
 
 export function getRecoveryStatus(pct: number): RecoveryStatus {
   if (pct >= 0.85) return "recovered";

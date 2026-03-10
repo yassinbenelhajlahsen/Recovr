@@ -6,13 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-
-type Theme = "light" | "dark";
-
-interface ThemeContextValue {
-  theme: Theme;
-  toggleTheme: () => void;
-}
+import type { Theme, ThemeContextValue } from "@/types/theme";
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: "light",
