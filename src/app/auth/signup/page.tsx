@@ -56,7 +56,7 @@ export default function SignUpPage() {
       await ensureUserInDb(data.user);
     }
 
-    router.push("/dashboard");
+    router.push("/onboarding");
   }
 
   async function handleGoogleSignIn() {

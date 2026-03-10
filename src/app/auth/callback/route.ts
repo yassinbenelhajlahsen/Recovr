@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error && data.user) {
-      await prisma.user.upsert({
+      const dbUser = await prisma.user.upsert({
         where: { email: data.user.email! },
         update: { id: data.user.id },
         create: {
@@ -20,9 +20,11 @@ export async function GET(request: Request) {
           email: data.user.email!,
           name: data.user.user_metadata?.full_name ?? null,
         },
+        select: { onboarding_completed: true },
       });
 
-      return NextResponse.redirect(`${origin}${next}`);
+      const dest = dbUser.onboarding_completed ? next : "/onboarding";
+      return NextResponse.redirect(`${origin}${dest}`);
     }
   }
 

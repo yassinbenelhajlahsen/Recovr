@@ -60,8 +60,12 @@ export default function SignInPage() {
     const supabase = createClient();
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { setError(error.message); setLoading(false); return; }
-    if (data.user) await ensureUserInDb(data.user);
-    router.push("/dashboard");
+    if (data.user) {
+      const { onboarding_completed } = await ensureUserInDb(data.user);
+      router.push(onboarding_completed ? "/dashboard" : "/onboarding");
+    } else {
+      router.push("/dashboard");
+    }
     router.refresh();
   }
 
