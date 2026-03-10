@@ -13,7 +13,7 @@ type Props = {
 function formatRelativeTime(isoDate: string, now: number): string {
   const diff = now - new Date(isoDate).getTime();
   const hours = Math.floor(diff / (1000 * 60 * 60));
-  if (hours < 1) return "Less than an hour ago";
+  if (hours < 1) return "Just now";
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days === 1) return "Yesterday";
@@ -28,9 +28,10 @@ function formatDate(isoDate: string): string {
   return `${weekdays[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
 }
 
-function formatVolume(lbs: number): string {
-  if (lbs >= 1000) return `${(lbs / 1000).toFixed(1)}k lbs`;
-  return `${Math.round(lbs).toLocaleString()} lbs`;
+function formatHoursLeft(hoursLeft: number): string {
+  if (hoursLeft < 6) return "Ready";
+  if (hoursLeft < 24) return `~${Math.round(hoursLeft)}h`;
+  return `~${Math.round(hoursLeft / 24)}d`;
 }
 
 export function MuscleDetailPanel({ recovery, onClose }: Props) {
@@ -39,12 +40,12 @@ export function MuscleDetailPanel({ recovery, onClose }: Props) {
     recoveryPct,
     status,
     lastTrainedAt,
-    lastSessionVolume,
     lastSessionSets,
     lastSessionReps,
     lastSessionExercises,
     lastWorkoutDuration,
     lastWorkoutNotes,
+    hoursSince,
   } = recovery;
 
   const openDrawer = useWorkoutStore((s) => s.openDrawer);
@@ -54,6 +55,11 @@ export function MuscleDetailPanel({ recovery, onClose }: Props) {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const pctDisplay = Math.round(recoveryPct * 100);
+
+  const estRecovery =
+    hoursSince === null || recoveryPct >= 1
+      ? "Ready"
+      : formatHoursLeft((hoursSince * (1 - recoveryPct)) / recoveryPct);
 
   // Progress bar gradient color
   const barColor =
@@ -110,8 +116,8 @@ export function MuscleDetailPanel({ recovery, onClose }: Props) {
             {clientNow && <p className="text-xs text-secondary">{formatDate(lastTrainedAt)}</p>}
           </div>
 
-          {/* Volume stats */}
-          {lastSessionVolume !== null && (
+          {/* Stats */}
+          {lastSessionSets !== null && (
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-elevated rounded-lg p-2.5 text-center">
                 <p className="text-base font-semibold text-primary">{lastSessionSets}</p>
@@ -122,8 +128,10 @@ export function MuscleDetailPanel({ recovery, onClose }: Props) {
                 <p className="text-xs text-muted">reps</p>
               </div>
               <div className="bg-elevated rounded-lg p-2.5 text-center">
-                <p className="text-sm font-semibold text-primary">{formatVolume(lastSessionVolume)}</p>
-                <p className="text-xs text-muted">volume</p>
+                <p className={`text-sm font-semibold ${estRecovery === "Ready" ? "text-success" : "text-primary"}`}>
+                  {estRecovery}
+                </p>
+                <p className="text-xs text-muted">est. ready</p>
               </div>
             </div>
           )}

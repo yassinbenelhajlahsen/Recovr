@@ -252,6 +252,7 @@ prisma/
 - **Multi-workout model**: residual fatigue accumulation — `combinedPct = clamp(1 - sum(1 - pct), 0, 1)` across all workouts in window (not just worst case)
 - **Bodyweight proxy**: `BODYWEIGHT_PROXY = 75` — bodyweight exercises (`equipment = "bodyweight"`) always add 75 lbs base; if extra weight logged (e.g. weighted dips at 25 lbs), volume = `reps * (75 + 25)`. Non-bodyweight sets with weight = 0 also fall back to 75.
 - **`MuscleRecovery` includes workout metadata**: `lastWorkoutId`, `lastWorkoutDuration`, `lastWorkoutNotes` — used by `MuscleDetailPanel` to render a clickable workout card
+- **Est. ready display**: `MuscleDetailPanel` stat cards show sets, reps, and estimated time until full recovery (derived client-side: `hoursLeft = hoursSince * (1 - pct) / pct`). Thresholds: `< 6h` → "Ready", `< 24h` → "~Xh", `≥ 24h` → "~Xd". Volume (lbs) is not shown — not actionable for users.
 - **Legacy timestamp fix**: midnight UTC timestamps (old workouts) are shifted to noon for accurate recovery aging
 - **Status thresholds**: `recovered` ≥ 0.85, `partial` ≥ 0.45, `fatigued` < 0.45
 - **16 muscle groups**: chest, triceps, shoulders, lower back, hamstrings, glutes, traps, back, biceps, rear shoulders, quadriceps, calves, forearms, core, abs, hip flexors, tibialis
