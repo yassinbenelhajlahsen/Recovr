@@ -23,7 +23,7 @@ export const MUSCLE_GROUPS = [
 ] as const;
 
 const BASE_RECOVERY_HOURS = 48;
-const VOLUME_THRESHOLD = 5000; // lbs — "normal" session volume for a muscle group
+const VOLUME_THRESHOLD = 2500; // lbs — "normal" session volume for a muscle group
 const WINDOW_HOURS = 96; // how far back to look for workouts
 // Proxy weight (lbs) applied per rep when a set has weight = 0 (bodyweight exercises)
 const BODYWEIGHT_PROXY = 75;
