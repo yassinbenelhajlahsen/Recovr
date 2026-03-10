@@ -9,6 +9,7 @@ export function useExerciseList(initialData?: WorkoutFormInitialData) {
       exercise_id: ex.exercise_id,
       exercise_name: ex.exercise_name,
       muscle_groups: ex.muscle_groups,
+      equipment: ex.equipment,
       order: ex.order,
       sets: ex.sets.map((s) => ({
         id: uid(),
@@ -27,6 +28,7 @@ export function useExerciseList(initialData?: WorkoutFormInitialData) {
         exercise_id: ex.id,
         exercise_name: ex.name,
         muscle_groups: ex.muscle_groups,
+        equipment: ex.equipment,
         order: 0,
         sets: [{ id: uid(), set_number: 1, reps: "", weight: "" }],
       },

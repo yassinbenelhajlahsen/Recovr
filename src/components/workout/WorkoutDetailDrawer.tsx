@@ -87,6 +87,7 @@ export function WorkoutDetailDrawer() {
           exercise_id: we.exercise.id,
           exercise_name: we.exercise.name,
           muscle_groups: we.exercise.muscle_groups,
+          equipment: we.exercise.equipment,
           order: we.order,
           sets: we.sets.map((s) => ({
             set_number: s.set_number,

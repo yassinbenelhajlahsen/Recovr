@@ -53,7 +53,7 @@ export async function calculateRecovery(userId: string): Promise<MuscleRecovery[
       date: true,
       workout_exercises: {
         select: {
-          exercise: { select: { name: true, muscle_groups: true } },
+          exercise: { select: { name: true, muscle_groups: true, equipment: true } },
           sets: { select: { reps: true, weight: true } },
         },
       },
@@ -95,12 +95,19 @@ export async function calculateRecovery(userId: string): Promise<MuscleRecovery[
     const muscleExercises = new Map<string, string[]>();
 
     for (const we of workout.workout_exercises) {
-      const { muscle_groups, name } = we.exercise;
-      // Use BODYWEIGHT_PROXY for sets logged with weight = 0 (bodyweight exercises)
-      const exerciseVolume = we.sets.reduce(
-        (sum, s) => sum + s.reps * (s.weight > 0 ? s.weight : BODYWEIGHT_PROXY),
-        0,
-      );
+      const { muscle_groups, name, equipment } = we.exercise;
+      const isBodyweight = equipment === "bodyweight";
+      // Bodyweight + extra weight (e.g. weighted dips): count bodyweight + added weight
+      // Bodyweight + no extra weight: count BODYWEIGHT_PROXY
+      // Non-bodyweight: count actual weight, or BODYWEIGHT_PROXY if somehow 0
+      const exerciseVolume = we.sets.reduce((sum, s) => {
+        const effectiveWeight = isBodyweight
+          ? BODYWEIGHT_PROXY + s.weight
+          : s.weight > 0
+            ? s.weight
+            : BODYWEIGHT_PROXY;
+        return sum + s.reps * effectiveWeight;
+      }, 0);
       const exerciseSets = we.sets.length;
       const exerciseReps = we.sets.reduce((sum, s) => sum + s.reps, 0);
 

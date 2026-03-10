@@ -7,6 +7,7 @@ export type ExerciseEntry = {
   exercise_id: string;
   exercise_name: string;
   muscle_groups: string[];
+  equipment?: string | null;
   order: number;
   sets: SetEntry[];
 };
@@ -27,6 +28,7 @@ export type WorkoutFormInitialData = {
     exercise_id: string;
     exercise_name: string;
     muscle_groups: string[];
+    equipment?: string | null;
     order: number;
     sets: { set_number: number; reps: number; weight: number }[];
   }[];
@@ -76,7 +78,7 @@ export type SessionSummaryData = {
 
 export type SetData = { id: string; set_number: number; reps: number; weight: number };
 
-export type ExerciseData = { id: string; name: string; muscle_groups: string[] };
+export type ExerciseData = { id: string; name: string; muscle_groups: string[]; equipment: string | null };
 
 export type WorkoutExerciseData = {
   id: string;
