@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Navbar } from "@/components/Navbar";
 import "./globals.css";
@@ -14,8 +15,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  axes: ["SOFT", "WONK", "opsz"],
+});
+
 export const metadata: Metadata = {
-  title: "BodyLab",
+  title: "Recovr",
   description: "Smart gym logging with muscle recovery tracking",
 };
 
@@ -35,7 +42,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-zinc-950`}
+        className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} antialiased font-sans bg-bg text-primary`}
       >
         <ThemeProvider>
           <Navbar />
