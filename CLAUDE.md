@@ -18,6 +18,15 @@ npx prisma db seed       # Seed default exercises
 npx prisma studio        # Open Prisma Studio (DB GUI)
 ```
 
+## Code Style & Modularity
+
+- **Keep files focused** — components should render JSX, not own business logic. If a file exceeds ~150 lines, consider whether state/effects/handlers belong in a hook.
+- **Extract hooks for non-trivial logic** — any `useState` + `useEffect` + handlers combination that isn't purely local UI state (e.g. open/close) should live in a colocated `hooks/` directory next to the component.
+- **No duplicate UI** — before building a new component, check if an existing one covers the need. Shared UI (goal selectors, icon sets, inputs) lives in `src/components/ui/`.
+- **All shared types in `src/types/`** — if a type is used by more than one file, or likely will be, it goes in the appropriate file under `src/types/`. Only truly one-off local shapes (e.g. a single `type View = "a" | "b"` used nowhere else) may stay inline.
+- **Shared icons in `src/components/ui/icons.tsx`** — never define SVG icon components inline in a feature file. Add them to the shared icons file and import from there.
+- **Colocate hooks** — hooks used by a single component family go in a `hooks/` subdirectory alongside those components (e.g. `workout/hooks/`, `settings/hooks/`). Hooks used app-wide go in `src/lib/` or `src/hooks/`.
+
 ## Auth Patterns
 
 - **Client Components**: use `createClient()` from `@/lib/supabase/client`
