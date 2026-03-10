@@ -1,0 +1,525 @@
+[
+  {
+    "label": "Push A — Heavy Chest",
+    "notes": "Heavy bench focus. [seed]",
+    "duration_minutes": 65,
+    "hoursAgo": 281,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 5, "weight": 100 },
+          { "reps": 5, "weight": 100 },
+          { "reps": 5, "weight": 100 },
+          { "reps": 4, "weight": 100 },
+          { "reps": 4, "weight": 100 }
+        ]
+      },
+      {
+        "name": "Overhead Press",
+        "sets": [
+          { "reps": 6, "weight": 60 },
+          { "reps": 6, "weight": 60 },
+          { "reps": 5, "weight": 60 },
+          { "reps": 5, "weight": 60 }
+        ]
+      },
+      {
+        "name": "Incline Dumbbell Press",
+        "sets": [
+          { "reps": 10, "weight": 35 },
+          { "reps": 10, "weight": 35 },
+          { "reps": 9,  "weight": 35 }
+        ]
+      },
+      {
+        "name": "Lateral Raise",
+        "sets": [
+          { "reps": 15, "weight": 12 },
+          { "reps": 15, "weight": 12 },
+          { "reps": 12, "weight": 12 }
+        ]
+      },
+      {
+        "name": "Skull Crusher",
+        "sets": [
+          { "reps": 12, "weight": 40 },
+          { "reps": 12, "weight": 40 },
+          { "reps": 10, "weight": 40 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Pull A — Heavy Back",
+    "notes": "Deadlift + vertical/horizontal pull. [seed]",
+    "duration_minutes": 70,
+    "hoursAgo": 257,
+    "exercises": [
+      {
+        "name": "Deadlift",
+        "sets": [
+          { "reps": 5, "weight": 140 },
+          { "reps": 5, "weight": 140 },
+          { "reps": 5, "weight": 140 },
+          { "reps": 4, "weight": 140 }
+        ]
+      },
+      {
+        "name": "Pull-Up",
+        "sets": [
+          { "reps": 8,  "weight": 0 },
+          { "reps": 7,  "weight": 0 },
+          { "reps": 6,  "weight": 0 },
+          { "reps": 6,  "weight": 0 }
+        ]
+      },
+      {
+        "name": "Barbell Row",
+        "sets": [
+          { "reps": 6, "weight": 80 },
+          { "reps": 6, "weight": 80 },
+          { "reps": 6, "weight": 80 }
+        ]
+      },
+      {
+        "name": "Lat Pulldown",
+        "sets": [
+          { "reps": 10, "weight": 70 },
+          { "reps": 10, "weight": 70 },
+          { "reps": 9,  "weight": 70 }
+        ]
+      },
+      {
+        "name": "Barbell Curl",
+        "sets": [
+          { "reps": 10, "weight": 45 },
+          { "reps": 10, "weight": 45 },
+          { "reps": 8,  "weight": 45 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Legs A — Squat Focus",
+    "notes": "Heavy squats + posterior chain. [seed]",
+    "duration_minutes": 75,
+    "hoursAgo": 233,
+    "exercises": [
+      {
+        "name": "Squat",
+        "sets": [
+          { "reps": 5, "weight": 120 },
+          { "reps": 5, "weight": 120 },
+          { "reps": 5, "weight": 120 },
+          { "reps": 4, "weight": 120 },
+          { "reps": 4, "weight": 120 }
+        ]
+      },
+      {
+        "name": "Romanian Deadlift",
+        "sets": [
+          { "reps": 8, "weight": 90 },
+          { "reps": 8, "weight": 90 },
+          { "reps": 8, "weight": 90 }
+        ]
+      },
+      {
+        "name": "Leg Press",
+        "sets": [
+          { "reps": 12, "weight": 180 },
+          { "reps": 12, "weight": 180 },
+          { "reps": 10, "weight": 180 }
+        ]
+      },
+      {
+        "name": "Leg Curl",
+        "sets": [
+          { "reps": 12, "weight": 55 },
+          { "reps": 12, "weight": 55 },
+          { "reps": 10, "weight": 55 }
+        ]
+      },
+      {
+        "name": "Calf Raise",
+        "sets": [
+          { "reps": 15, "weight": 80 },
+          { "reps": 15, "weight": 80 },
+          { "reps": 15, "weight": 80 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Arms & Core",
+    "notes": "Isolation + core finisher. [seed]",
+    "duration_minutes": 50,
+    "hoursAgo": 185,
+    "exercises": [
+      {
+        "name": "Dumbbell Curl",
+        "sets": [
+          { "reps": 12, "weight": 18 },
+          { "reps": 12, "weight": 18 },
+          { "reps": 10, "weight": 18 }
+        ]
+      },
+      {
+        "name": "Hammer Curl",
+        "sets": [
+          { "reps": 12, "weight": 18 },
+          { "reps": 12, "weight": 18 },
+          { "reps": 10, "weight": 18 }
+        ]
+      },
+      {
+        "name": "Tricep Pushdown",
+        "sets": [
+          { "reps": 15, "weight": 35 },
+          { "reps": 15, "weight": 35 },
+          { "reps": 12, "weight": 35 }
+        ]
+      },
+      {
+        "name": "Overhead Tricep Extension",
+        "sets": [
+          { "reps": 12, "weight": 24 },
+          { "reps": 12, "weight": 24 },
+          { "reps": 10, "weight": 24 }
+        ]
+      },
+      {
+        "name": "Cable Crunch",
+        "sets": [
+          { "reps": 15, "weight": 45 },
+          { "reps": 15, "weight": 45 },
+          { "reps": 15, "weight": 45 }
+        ]
+      },
+      {
+        "name": "Hanging Leg Raise",
+        "sets": [
+          { "reps": 12, "weight": 0 },
+          { "reps": 12, "weight": 0 },
+          { "reps": 10, "weight": 0 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Push B — Volume",
+    "notes": "Higher rep chest + shoulder volume. [seed]",
+    "duration_minutes": 60,
+    "hoursAgo": 161,
+    "exercises": [
+      {
+        "name": "Dumbbell Bench Press",
+        "sets": [
+          { "reps": 10, "weight": 40 },
+          { "reps": 10, "weight": 40 },
+          { "reps": 9,  "weight": 40 },
+          { "reps": 8,  "weight": 40 }
+        ]
+      },
+      {
+        "name": "Incline Bench Press",
+        "sets": [
+          { "reps": 8, "weight": 80 },
+          { "reps": 8, "weight": 80 },
+          { "reps": 7, "weight": 80 }
+        ]
+      },
+      {
+        "name": "Cable Fly",
+        "sets": [
+          { "reps": 15, "weight": 20 },
+          { "reps": 15, "weight": 20 },
+          { "reps": 12, "weight": 20 }
+        ]
+      },
+      {
+        "name": "Dumbbell Shoulder Press",
+        "sets": [
+          { "reps": 12, "weight": 28 },
+          { "reps": 12, "weight": 28 },
+          { "reps": 10, "weight": 28 }
+        ]
+      },
+      {
+        "name": "Face Pull",
+        "sets": [
+          { "reps": 15, "weight": 25 },
+          { "reps": 15, "weight": 25 },
+          { "reps": 15, "weight": 25 }
+        ]
+      },
+      {
+        "name": "Tricep Dip",
+        "sets": [
+          { "reps": 12, "weight": 0 },
+          { "reps": 10, "weight": 0 },
+          { "reps": 10, "weight": 0 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Pull B — Volume",
+    "notes": "Higher rep back + rear delt focus. [seed]",
+    "duration_minutes": 65,
+    "hoursAgo": 137,
+    "exercises": [
+      {
+        "name": "Lat Pulldown",
+        "sets": [
+          { "reps": 12, "weight": 65 },
+          { "reps": 12, "weight": 65 },
+          { "reps": 10, "weight": 65 },
+          { "reps": 10, "weight": 65 }
+        ]
+      },
+      {
+        "name": "Seated Cable Row",
+        "sets": [
+          { "reps": 12, "weight": 70 },
+          { "reps": 12, "weight": 70 },
+          { "reps": 10, "weight": 70 }
+        ]
+      },
+      {
+        "name": "Dumbbell Row",
+        "sets": [
+          { "reps": 12, "weight": 40 },
+          { "reps": 12, "weight": 40 },
+          { "reps": 10, "weight": 40 }
+        ]
+      },
+      {
+        "name": "Reverse Fly",
+        "sets": [
+          { "reps": 15, "weight": 12 },
+          { "reps": 15, "weight": 12 },
+          { "reps": 12, "weight": 12 }
+        ]
+      },
+      {
+        "name": "EZ-Bar Curl",
+        "sets": [
+          { "reps": 12, "weight": 40 },
+          { "reps": 12, "weight": 40 },
+          { "reps": 10, "weight": 40 }
+        ]
+      },
+      {
+        "name": "Concentration Curl",
+        "sets": [
+          { "reps": 12, "weight": 16 },
+          { "reps": 12, "weight": 16 },
+          { "reps": 10, "weight": 16 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Legs B — Hypertrophy",
+    "notes": "Quad dominant + glute volume. [seed]",
+    "duration_minutes": 70,
+    "hoursAgo": 89,
+    "exercises": [
+      {
+        "name": "Hack Squat",
+        "sets": [
+          { "reps": 10, "weight": 100 },
+          { "reps": 10, "weight": 100 },
+          { "reps": 10, "weight": 100 },
+          { "reps": 8,  "weight": 100 }
+        ]
+      },
+      {
+        "name": "Bulgarian Split Squat",
+        "sets": [
+          { "reps": 10, "weight": 24 },
+          { "reps": 10, "weight": 24 },
+          { "reps": 8,  "weight": 24 }
+        ]
+      },
+      {
+        "name": "Hip Thrust",
+        "sets": [
+          { "reps": 12, "weight": 100 },
+          { "reps": 12, "weight": 100 },
+          { "reps": 10, "weight": 100 }
+        ]
+      },
+      {
+        "name": "Leg Extension",
+        "sets": [
+          { "reps": 15, "weight": 50 },
+          { "reps": 15, "weight": 50 },
+          { "reps": 12, "weight": 50 }
+        ]
+      },
+      {
+        "name": "Seated Calf Raise",
+        "sets": [
+          { "reps": 20, "weight": 40 },
+          { "reps": 20, "weight": 40 },
+          { "reps": 15, "weight": 40 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Shoulders & Traps",
+    "notes": "Shoulder width + trap thickness. [seed]",
+    "duration_minutes": 55,
+    "hoursAgo": 65,
+    "exercises": [
+      {
+        "name": "Arnold Press",
+        "sets": [
+          { "reps": 10, "weight": 26 },
+          { "reps": 10, "weight": 26 },
+          { "reps": 8,  "weight": 26 }
+        ]
+      },
+      {
+        "name": "Lateral Raise",
+        "sets": [
+          { "reps": 15, "weight": 12 },
+          { "reps": 15, "weight": 12 },
+          { "reps": 15, "weight": 12 },
+          { "reps": 12, "weight": 12 }
+        ]
+      },
+      {
+        "name": "Cable Lateral Raise",
+        "sets": [
+          { "reps": 15, "weight": 10 },
+          { "reps": 15, "weight": 10 },
+          { "reps": 12, "weight": 10 }
+        ]
+      },
+      {
+        "name": "Face Pull",
+        "sets": [
+          { "reps": 20, "weight": 22 },
+          { "reps": 20, "weight": 22 },
+          { "reps": 15, "weight": 22 }
+        ]
+      },
+      {
+        "name": "Shrug",
+        "sets": [
+          { "reps": 12, "weight": 100 },
+          { "reps": 12, "weight": 100 },
+          { "reps": 10, "weight": 100 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Upper Power",
+    "notes": "Compound upper — strength focus. [seed]",
+    "duration_minutes": 60,
+    "hoursAgo": 41,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 3, "weight": 110 },
+          { "reps": 3, "weight": 110 },
+          { "reps": 3, "weight": 110 }
+        ]
+      },
+      {
+        "name": "Overhead Press",
+        "sets": [
+          { "reps": 4, "weight": 65 },
+          { "reps": 4, "weight": 65 },
+          { "reps": 3, "weight": 65 }
+        ]
+      },
+      {
+        "name": "Barbell Row",
+        "sets": [
+          { "reps": 5, "weight": 85 },
+          { "reps": 5, "weight": 85 },
+          { "reps": 4, "weight": 85 }
+        ]
+      },
+      {
+        "name": "Chin-Up",
+        "sets": [
+          { "reps": 8, "weight": 0 },
+          { "reps": 7, "weight": 0 },
+          { "reps": 6, "weight": 0 }
+        ]
+      },
+      {
+        "name": "Close-Grip Bench Press",
+        "sets": [
+          { "reps": 8, "weight": 75 },
+          { "reps": 8, "weight": 75 },
+          { "reps": 6, "weight": 75 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Core & Accessories",
+    "notes": "Core + small muscle finisher. [seed]",
+    "duration_minutes": 40,
+    "hoursAgo": 17,
+    "exercises": [
+      {
+        "name": "Plank",
+        "sets": [
+          { "reps": 60, "weight": 0 },
+          { "reps": 60, "weight": 0 },
+          { "reps": 45, "weight": 0 }
+        ]
+      },
+      {
+        "name": "Ab Rollout",
+        "sets": [
+          { "reps": 12, "weight": 0 },
+          { "reps": 12, "weight": 0 },
+          { "reps": 10, "weight": 0 }
+        ]
+      },
+      {
+        "name": "Cable Crunch",
+        "sets": [
+          { "reps": 15, "weight": 50 },
+          { "reps": 15, "weight": 50 },
+          { "reps": 12, "weight": 50 }
+        ]
+      },
+      {
+        "name": "Russian Twist",
+        "sets": [
+          { "reps": 20, "weight": 10 },
+          { "reps": 20, "weight": 10 },
+          { "reps": 16, "weight": 10 }
+        ]
+      },
+      {
+        "name": "Calf Raise",
+        "sets": [
+          { "reps": 20, "weight": 80 },
+          { "reps": 20, "weight": 80 },
+          { "reps": 15, "weight": 80 }
+        ]
+      },
+      {
+        "name": "Tibialis Raise",
+        "sets": [
+          { "reps": 20, "weight": 0 },
+          { "reps": 20, "weight": 0 },
+          { "reps": 20, "weight": 0 }
+        ]
+      }
+    ]
+  }
+]

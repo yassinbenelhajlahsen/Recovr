@@ -70,8 +70,10 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 
 ### Seeding
 
-- `prisma/seed.ts` **never deletes** default exercises — `WorkoutExercise` has `onDelete: Cascade` on the exercise FK, so deleting exercises cascades and wipes all sets. Instead the seed fetches existing names, inserts missing exercises, and updates `muscle_groups`/`equipment` on existing ones.
-- Safe to re-run at any time without losing user workout data.
+- `prisma/seed.ts` is split into two functions: `seedExercises()` and `seedWorkouts()`
+- `seedExercises()` **never deletes** default exercises — `WorkoutExercise` has `onDelete: Cascade` on the exercise FK, so deleting exercises cascades and wipes all sets. Instead it fetches existing names, inserts missing exercises, and updates `muscle_groups`/`equipment` on existing ones.
+- `seedWorkouts()` inserts 10 dev workouts (Push/Pull/Legs/Arms/Core) spread across the past ~6.5 days for user `66894e73-822a-493f-9955-ef11a7378fb4`. Uses `[seed]` tag in `notes` for idempotency — re-running skips already-inserted workouts. Gracefully skips if the user doesn't exist.
+- Both functions are idempotent — safe to re-run at any time without losing user workout data.
 
 ### Muscle group naming
 
@@ -224,9 +226,10 @@ src/
 └── proxy.ts                    # Next.js 16 proxy — route protection via updateSession()
 prisma/
 ├── schema.prisma               # Data models
-├── seed.ts                     # Default exercises seed (imports from ./data/exercises.json)
+├── seed.ts                     # Exercises + dev workout seed (split into seedExercises / seedWorkouts)
 ├── data/
-│   └── exercises.json          # Default exercise library (92 exercises, seeded with user_id: null)
+│   ├── exercises.json          # Default exercise library (92 exercises, seeded with user_id: null)
+│   └── workouts.json           # 10 dev workout templates (Push/Pull/Legs/Arms/Core) for local testing
 └── migrations/                 # Migration history
 ```
 
