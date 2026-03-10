@@ -59,9 +59,15 @@ export function WorkoutForm({ workoutId, initialData, onSave, onCancel, compact 
   const router = useRouter();
   const isEdit = !!workoutId;
 
-  const [date, setDate] = useState(
-    initialData?.date ?? new Date().toISOString().split("T")[0]
-  );
+  const [date, setDate] = useState(() => {
+    if (initialData?.date) return initialData.date;
+    // Build YYYY-MM-DD from UTC to avoid hydration mismatch
+    const d = new Date();
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  });
   const [notes, setNotes] = useState(initialData?.notes ?? "");
   const [duration, setDuration] = useState(
     initialData?.duration_minutes != null ? String(initialData.duration_minutes) : ""

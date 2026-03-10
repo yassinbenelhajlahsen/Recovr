@@ -3,9 +3,9 @@
 import { Suspense } from "react";
 import { motion } from "framer-motion";
 import { useWorkoutStore } from "@/store/workoutStore";
-import { WorkoutDetailDrawer } from "@/components/WorkoutDetailDrawer";
-import { SessionSummaryModal } from "@/components/SessionSummaryModal";
-import { WorkoutsFilter } from "@/components/WorkoutsFilter";
+import { WorkoutDetailDrawer } from "@/components/workout/WorkoutDetailDrawer";
+import { SessionSummaryModal } from "@/components/workout/SessionSummaryModal";
+import { WorkoutsFilter } from "@/components/workout/WorkoutsFilter";
 import { RecoveryPanel } from "@/components/recovery/RecoveryPanel";
 import type { MuscleRecovery } from "@/lib/recovery";
 

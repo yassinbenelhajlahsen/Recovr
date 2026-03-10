@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useRef, useState, useEffect, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 const DATE_PRESETS = [
@@ -93,26 +93,10 @@ export function WorkoutsFilter() {
     push(search, datePresetRef.current, next);
   }
 
-  function clear() {
-    setSearch("");
-    setDatePreset("");
-    setMuscles([]);
-    datePresetRef.current = "";
-    musclesRef.current = [];
-    startTransition(() => {
-      router.push(pathname);
-    });
-  }
-
   const extraMuscles = MUSCLE_GROUPS.filter((m) => !PINNED_MUSCLES.includes(m));
   const hasActiveInExtra = extraMuscles.some((m) => muscles.includes(m));
 
-  const [showAll, setShowAll] = useState(false);
-
-  // Auto-expand if a selected muscle is in the hidden section
-  useEffect(() => {
-    if (hasActiveInExtra) setShowAll(true);
-  }, [hasActiveInExtra]);
+  const [showAll, setShowAll] = useState(hasActiveInExtra);
 
   const hiddenCount = extraMuscles.length;
 

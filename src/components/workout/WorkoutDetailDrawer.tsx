@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Drawer } from "@/components/ui/Drawer";
-import { DeleteWorkoutButton } from "@/components/DeleteWorkoutButton";
-import { WorkoutForm } from "@/components/WorkoutForm";
+import { DeleteWorkoutButton } from "@/components/workout/DeleteWorkoutButton";
+import { WorkoutForm } from "@/components/workout/WorkoutForm";
 import { useWorkoutStore, SessionSummaryData } from "@/store/workoutStore";
 
 type SetData = { id: string; set_number: number; reps: number; weight: number };
@@ -38,23 +38,34 @@ export function WorkoutDetailDrawer() {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
-    if (!open) {
-      setWorkout(null);
-      setIsEditing(false);
-      return;
-    }
-    if (!selectedWorkoutId) {
-      setWorkout(null);
-      setIsEditing(false);
-      return;
-    }
+  // Reset state when drawer opens/closes via derived state
+  const [trackedId, setTrackedId] = useState<string | null>(null);
+  if (open && selectedWorkoutId && selectedWorkoutId !== trackedId) {
+    setTrackedId(selectedWorkoutId);
+    setWorkout(null);
+    setIsEditing(false);
     setLoading(true);
-    fetch(`/api/workouts/${selectedWorkoutId}`)
-      .then((r) => r.json())
-      .then((data) => setWorkout(data))
-      .finally(() => setLoading(false));
-  }, [open, selectedWorkoutId]);
+  } else if (!open && trackedId !== null) {
+    setTrackedId(null);
+    setWorkout(null);
+    setIsEditing(false);
+  }
+
+  const fetchWorkout = useCallback(async (id: string) => {
+    try {
+      const r = await fetch(`/api/workouts/${id}`);
+      const data = await r.json();
+      setWorkout(data);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (loading && selectedWorkoutId) {
+      fetchWorkout(selectedWorkoutId);
+    }
+  }, [loading, selectedWorkoutId, fetchWorkout]);
 
   function handleCreateSave(data: SessionSummaryData) {
     useWorkoutStore.setState({ activeModal: "sessionSummary", activeSession: data });
