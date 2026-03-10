@@ -34,6 +34,7 @@ const MUSCLE_LABELS: Record<string, string> = {
   quadriceps: "Quads",
   "lower back": "Lower Back",
   "rear shoulders": "Rear Delts",
+  core: "Core/Abs",
 };
 
 function parseMuscles(param: string | null): string[] {
