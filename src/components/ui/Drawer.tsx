@@ -14,6 +14,7 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- portal mount/unmount + animation requires effect-driven setState */
   useEffect(() => {
     if (open) {
       setMounted(true);
@@ -30,6 +31,7 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
       return () => clearTimeout(t);
     }
   }, [open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!open) return;

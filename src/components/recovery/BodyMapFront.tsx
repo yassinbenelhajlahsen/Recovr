@@ -71,7 +71,7 @@ function useDarkMode() {
 // All front-view slugs passed as data so the library activates them
 const FRONT_DATA = FRONT_MUSCLE_MAP.map(({ slug }) => ({ slug, intensity: 1 }));
 
-export function BodyMapFront({ muscles, selectedMuscle, onSelectMuscle }: BodyMapProps) {
+export function BodyMapFront({ muscles, onSelectMuscle }: BodyMapProps) {
   const isDark = useDarkMode();
   const containerId = "bm-front";
   const css = buildCss(FRONT_MUSCLE_MAP, muscles, isDark, containerId);

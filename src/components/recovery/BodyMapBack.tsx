@@ -69,7 +69,7 @@ function useDarkMode() {
 
 const BACK_DATA = BACK_MUSCLE_MAP.map(({ slug }) => ({ slug, intensity: 1 }));
 
-export function BodyMapBack({ muscles, selectedMuscle, onSelectMuscle }: BodyMapProps) {
+export function BodyMapBack({ muscles, onSelectMuscle }: BodyMapProps) {
   const isDark = useDarkMode();
   const containerId = "bm-back";
   const css = buildCss(BACK_MUSCLE_MAP, muscles, isDark, containerId);

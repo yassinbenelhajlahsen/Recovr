@@ -3,7 +3,6 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -21,17 +20,14 @@ const ThemeContext = createContext<ThemeContextValue>({
 });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("theme") as Theme | null;
-    const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-    const initial = stored ?? preferred;
-    setTheme(initial);
-    document.documentElement.classList.toggle("dark", initial === "dark");
-  }, []);
+  // Read initial theme from the DOM class set by the anti-FOUC script in layout.tsx.
+  // This avoids a cascading setState in useEffect.
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof document !== "undefined") {
+      return document.documentElement.classList.contains("dark") ? "dark" : "light";
+    }
+    return "light";
+  });
 
   function toggleTheme() {
     setTheme((prev) => {

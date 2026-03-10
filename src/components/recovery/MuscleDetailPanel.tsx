@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { MuscleRecovery } from "@/lib/recovery";
 import { STATUS_LABELS, STATUS_COLORS } from "./recoveryColors";
 
@@ -8,8 +9,8 @@ type Props = {
   onClose: () => void;
 };
 
-function formatRelativeTime(isoDate: string): string {
-  const diff = Date.now() - new Date(isoDate).getTime();
+function formatRelativeTime(isoDate: string, now: number): string {
+  const diff = now - new Date(isoDate).getTime();
   const hours = Math.floor(diff / (1000 * 60 * 60));
   if (hours < 1) return "Less than an hour ago";
   if (hours < 24) return `${hours}h ago`;
@@ -19,11 +20,10 @@ function formatRelativeTime(isoDate: string): string {
 }
 
 function formatDate(isoDate: string): string {
-  return new Date(isoDate).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  const d = new Date(isoDate);
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${weekdays[d.getUTCDay()]}, ${months[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
 function formatVolume(lbs: number): string {
@@ -43,6 +43,11 @@ export function MuscleDetailPanel({ recovery, onClose }: Props) {
     lastSessionExercises,
   } = recovery;
 
+  const [clientNow, setClientNow] = useState<number | null>(null);
+  /* eslint-disable react-hooks/set-state-in-effect -- client-only mount detection for relative time display */
+  useEffect(() => { setClientNow(Date.now()); }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   const pctDisplay = Math.round(recoveryPct * 100);
 
   // Progress bar gradient color
@@ -52,7 +57,7 @@ export function MuscleDetailPanel({ recovery, onClose }: Props) {
       : status === "partial"
         ? "bg-recovery-yellow"
         : "bg-danger";
-
+  
   return (
     <div className="bg-surface border border-border-subtle rounded-xl p-5 flex flex-col gap-4 h-full overflow-y-auto">
       {/* Header */}
@@ -96,7 +101,8 @@ export function MuscleDetailPanel({ recovery, onClose }: Props) {
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-xs text-muted uppercase tracking-widest mb-1">Last trained</p>
-            <p className="text-sm text-primary font-medium">{formatRelativeTime(lastTrainedAt)}</p>
+            <p className="text-sm text-primary font-medium">{clientNow ? formatRelativeTime(lastTrainedAt, clientNow) : formatDate(lastTrainedAt)}</p>
+            
             <p className="text-xs text-secondary">{formatDate(lastTrainedAt)}</p>
           </div>
 

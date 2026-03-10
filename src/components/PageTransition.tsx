@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 
@@ -25,9 +25,18 @@ function getDirection(prev: string | null, next: string): Direction {
 
 function useDirection(): { pathname: string; direction: Direction } {
   const pathname = usePathname();
-  const prevRef = useRef<string | null>(null);
-  const direction = getDirection(prevRef.current, pathname);
-  if (prevRef.current !== pathname) prevRef.current = pathname;
+  const [prev, setPrev] = useState<string | null>(null);
+  const [direction, setDirection] = useState<Direction>(0);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- direction must update on pathname change */
+  useEffect(() => {
+    if (prev !== null && prev !== pathname) {
+      setDirection(getDirection(prev, pathname));
+    }
+    setPrev(pathname);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   return { pathname, direction };
 }
 

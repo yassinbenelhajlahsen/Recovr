@@ -14,6 +14,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- portal mount/unmount + animation requires effect-driven setState */
   useEffect(() => {
     if (open) {
       setMounted(true);
@@ -25,6 +26,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       return () => clearTimeout(t);
     }
   }, [open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!open) return;
