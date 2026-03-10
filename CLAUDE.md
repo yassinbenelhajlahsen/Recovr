@@ -119,7 +119,7 @@ src/
 │       ├── FloatingInput.tsx   # Floating label input component
 │       └── PasswordChecklist.tsx # Password validation checklist
 ├── store/
-│   └── workoutStore.ts         # Zustand store for modal state
+│   └── workoutStore.ts         # Zustand store (modal state, preview data, session summary)
 ├── lib/
 │   ├── prisma.ts               # Singleton PrismaClient
 │   └── supabase/
@@ -136,6 +136,16 @@ prisma/
 │   └── exercises.json          # Default exercise library (92 exercises, seeded with user_id: null)
 └── migrations/                 # Migration history
 ```
+
+## State Management (Zustand)
+
+- **Store**: `src/store/workoutStore.ts` — manages modal/drawer state, workout preview data, and session summary data
+- **Key types**: `SessionSummaryData` (full workout data for post-save modal), `WorkoutPreview` (summary from list for instant drawer preview)
+- **Pattern — pass data through store, not refetch**: When navigating between views (e.g., form save → summary modal, card click → drawer), pass available data via the store instead of fetching from the API. Components render immediately with the data they have.
+  - `SessionSummaryModal`: reads `activeSession` directly from store (no fetch)
+  - `WorkoutDetailDrawer`: uses `previewData` from card click to render instant preview (date, exercise names, stats) while full detail loads; uses `onSave` data after edit to update view without refetching
+  - `WorkoutForm.onSave`: passes full workout data (date, exercises, sets) constructed from local state — consumers should use this instead of refetching
+- **Exercise search cache**: `WorkoutForm` uses a `useRef<Map<string, Exercise[]>>` to cache `/api/exercises` search results per query. Cache is cleared after creating a custom exercise.
 
 ## Environment Variables (.env)
 

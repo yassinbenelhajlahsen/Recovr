@@ -29,7 +29,7 @@ function formatDate(dateStr: string) {
 }
 
 export function WorkoutDetailDrawer() {
-  const { activeModal, selectedWorkoutId, closeModal } = useWorkoutStore();
+  const { activeModal, selectedWorkoutId, previewData, closeModal } = useWorkoutStore();
   const router = useRouter();
   const open = activeModal === "exerciseDrawer";
   const isCreate = open && !selectedWorkoutId;
@@ -60,16 +60,20 @@ export function WorkoutDetailDrawer() {
     useWorkoutStore.setState({ activeModal: "sessionSummary", activeSession: data });
   }
 
-  function handleEditSave() {
+  function handleEditSave(data: SessionSummaryData) {
     setIsEditing(false);
-    setLoading(true);
-    fetch(`/api/workouts/${selectedWorkoutId}`)
-      .then((r) => r.json())
-      .then((data) => setWorkout(data))
-      .finally(() => {
-        setLoading(false);
-        router.refresh();
-      });
+    setWorkout({
+      id: data.id,
+      date: data.date,
+      duration_minutes: data.duration_minutes,
+      notes: data.notes,
+      workout_exercises: data.workout_exercises.map((we, i) => ({
+        ...we,
+        exercise: we.exercise,
+        order: i,
+      })),
+    });
+    router.refresh();
   }
 
   const totalSets =
@@ -81,6 +85,8 @@ export function WorkoutDetailDrawer() {
     ? "Edit Workout"
     : workout
     ? formatDate(workout.date)
+    : previewData
+    ? previewData.dateFormatted
     : loading
     ? " "
     : undefined;
@@ -116,8 +122,40 @@ export function WorkoutDetailDrawer() {
           />
         )}
 
-        {/* Loading skeleton */}
-        {!isCreate && loading && (
+        {/* Preview mode — instant render from list data */}
+        {!isCreate && loading && previewData && (
+          <>
+            <div className="flex items-center gap-3 text-sm text-secondary">
+              {previewData.durationMinutes && (
+                <span className="tabular-nums">{previewData.durationMinutes} min</span>
+              )}
+              <span className="tabular-nums">{previewData.totalSets} {previewData.totalSets === 1 ? "set" : "sets"}</span>
+            </div>
+            {previewData.notes && (
+              <p className="text-sm text-secondary italic border-l-2 border-accent/30 pl-3">
+                {previewData.notes}
+              </p>
+            )}
+            <div className="space-y-3">
+              {previewData.exerciseNames.map((name) => (
+                <div
+                  key={name}
+                  className="rounded-xl bg-surface border border-border-subtle overflow-hidden"
+                >
+                  <div className="px-5 py-3.5 border-b border-border">
+                    <p className="font-semibold text-sm text-primary">{name}</p>
+                  </div>
+                  <div className="px-5 py-3.5 animate-pulse">
+                    <div className="h-3 bg-bg rounded w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Loading skeleton fallback */}
+        {!isCreate && loading && !previewData && (
           <div className="space-y-3 animate-pulse">
             <div className="h-4 bg-surface rounded-lg w-1/3" />
             <div className="h-24 bg-surface rounded-xl" />

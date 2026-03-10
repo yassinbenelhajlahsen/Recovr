@@ -44,7 +44,7 @@ type Props = {
     notes: string | null;
     workout_exercises: {
       id: string;
-      exercise: { name: string; muscle_groups: string[] };
+      exercise: { id: string; name: string; muscle_groups: string[] };
       sets: { id: string; set_number: number; reps: number; weight: number }[];
     }[];
   }) => void;
@@ -101,12 +101,20 @@ export function WorkoutForm({ workoutId, initialData, onSave, onCancel, compact 
   const [error, setError] = useState("");
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchCache = useRef<Map<string, Exercise[]>>(new Map());
 
   const fetchExercises = useCallback(async (q: string) => {
+    const cached = searchCache.current.get(q);
+    if (cached) {
+      setSearchResults(cached);
+      return;
+    }
     setSearchLoading(true);
     try {
       const res = await fetch(`/api/exercises?q=${encodeURIComponent(q)}`);
-      setSearchResults(await res.json());
+      const data = await res.json();
+      searchCache.current.set(q, data);
+      setSearchResults(data);
     } catch {
       /* ignore */
     } finally {
@@ -232,6 +240,7 @@ export function WorkoutForm({ workoutId, initialData, onSave, onCancel, compact 
       });
       if (!res.ok) throw new Error();
       addExercise(await res.json());
+      searchCache.current.clear();
       setCustomName("");
       setCustomMuscles("");
       setCustomEquipment("");
@@ -290,7 +299,7 @@ export function WorkoutForm({ workoutId, initialData, onSave, onCancel, compact 
           notes: notes || null,
           workout_exercises: exercises.map((ex, i) => ({
             id: `local-we-${i}`,
-            exercise: { name: ex.exercise_name, muscle_groups: ex.muscle_groups },
+            exercise: { id: ex.exercise_id, name: ex.exercise_name, muscle_groups: ex.muscle_groups },
             sets: ex.sets.map((s) => ({
               id: s.id,
               set_number: s.set_number,
