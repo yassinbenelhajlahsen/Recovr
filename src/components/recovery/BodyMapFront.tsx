@@ -2,11 +2,11 @@
 
 import Body, { type Slug } from "@mjcdev/react-body-highlighter";
 import { getRecoveryFill, getNeutralFill } from "./recoveryColors";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useClientStore } from "@/store/clientStore";
 
 type BodyMapProps = {
   muscles: Record<string, { recoveryPct: number } | undefined>;
-  selectedMuscle: string | null;
   onSelectMuscle: (muscle: string) => void;
 };
 
@@ -56,25 +56,17 @@ function buildCss(
   return `${sizeCss}\n${muscleCss}`;
 }
 
-function useDarkMode() {
-  const [isDark, setIsDark] = useState(false);
-  useEffect(() => {
-    const check = () => setIsDark(document.documentElement.classList.contains("dark"));
-    check();
-    const observer = new MutationObserver(check);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
-  return isDark;
-}
-
 // All front-view slugs passed as data so the library activates them
 const FRONT_DATA = FRONT_MUSCLE_MAP.map(({ slug }) => ({ slug, intensity: 1 }));
 
 export function BodyMapFront({ muscles, onSelectMuscle }: BodyMapProps) {
-  const isDark = useDarkMode();
+  const { mounted, isDark, hydrate } = useClientStore();
+  useEffect(hydrate, [hydrate]);
+
   const containerId = "bm-front";
   const css = buildCss(FRONT_MUSCLE_MAP, muscles, isDark, containerId);
+
+  if (!mounted) return <div style={{ aspectRatio: "160 / 340" }} />;
 
   return (
     <div id={containerId}>

@@ -46,7 +46,6 @@ export function RecoveryView({ recovery }: Props) {
             <div className="mx-auto" style={{ maxWidth: 200 }}>
               <BodyMapFront
                 muscles={muscleMap}
-                selectedMuscle={selectedMuscle}
                 onSelectMuscle={handleSelect}
               />
             </div>
@@ -56,7 +55,6 @@ export function RecoveryView({ recovery }: Props) {
             <div className="mx-auto" style={{ maxWidth: 200 }}>
               <BodyMapBack
                 muscles={muscleMap}
-                selectedMuscle={selectedMuscle}
                 onSelectMuscle={handleSelect}
               />
             </div>

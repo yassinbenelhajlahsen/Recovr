@@ -39,7 +39,6 @@ export function RecoverySummary({ recovery }: Props) {
       <div className="flex-shrink-0" style={{ width: 100 }}>
         <BodyMapFront
           muscles={muscleMap}
-          selectedMuscle={null}
           onSelectMuscle={() => {}}
         />
       </div>

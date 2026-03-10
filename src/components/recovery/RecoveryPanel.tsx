@@ -51,7 +51,7 @@ export function RecoveryPanel({ recovery }: Props) {
             <p className="text-xs text-muted text-center mb-1 uppercase tracking-widest">Front</p>
             <BodyMapFront
               muscles={muscleMap}
-              selectedMuscle={selectedMuscle}
+
               onSelectMuscle={handleSelect}
             />
           </div>
@@ -60,7 +60,7 @@ export function RecoveryPanel({ recovery }: Props) {
             <p className="text-xs text-muted text-center mb-1 uppercase tracking-widest">Back</p>
             <BodyMapBack
               muscles={muscleMap}
-              selectedMuscle={selectedMuscle}
+
               onSelectMuscle={handleSelect}
             />
           </div>
