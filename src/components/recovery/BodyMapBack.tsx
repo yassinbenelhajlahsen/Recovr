@@ -1,7 +1,7 @@
 "use client";
 
 import Body, { type Slug } from "@mjcdev/react-body-highlighter";
-import { getRecoveryFill, getNeutralFill } from "./recoveryColors";
+import { buildBodyMapCss } from "./recoveryColors";
 import { useEffect } from "react";
 import { useClientStore } from "@/store/clientStore";
 import type { BodyMapProps } from "@/types/recovery";
@@ -31,26 +31,6 @@ const SLUG_TO_MUSCLE: Record<string, string> = {
   calves: "calves",
 };
 
-function buildCss(
-  entries: Array<{ muscle: string; slug: Slug }>,
-  muscles: Record<string, { recoveryPct: number } | undefined>,
-  isDark: boolean,
-  containerId: string
-): string {
-  const muscleCss = entries
-    .map(({ muscle, slug }) => {
-      const data = muscles[muscle];
-      const color =
-        data != null
-          ? getRecoveryFill(data.recoveryPct, isDark)
-          : getNeutralFill(isDark);
-      return `#${containerId} #${slug} { fill: ${color}; }`;
-    })
-    .join("\n");
-  const sizeCss = `#${containerId} svg { width: 100% !important; height: auto !important; }`;
-  return `${sizeCss}\n${muscleCss}`;
-}
-
 const BACK_DATA = BACK_MUSCLE_MAP.map(({ slug }) => ({ slug, intensity: 1 }));
 
 export function BodyMapBack({ muscles, onSelectMuscle }: BodyMapProps) {
@@ -58,7 +38,7 @@ export function BodyMapBack({ muscles, onSelectMuscle }: BodyMapProps) {
   useEffect(hydrate, [hydrate]);
 
   const containerId = "bm-back";
-  const css = buildCss(BACK_MUSCLE_MAP, muscles, isDark, containerId);
+  const css = buildBodyMapCss(BACK_MUSCLE_MAP, muscles, isDark, containerId);
 
   if (!mounted) return <div style={{ aspectRatio: "160 / 340" }} />;
 

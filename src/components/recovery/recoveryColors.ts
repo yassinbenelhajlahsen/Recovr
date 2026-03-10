@@ -1,3 +1,4 @@
+import type { Slug } from "@mjcdev/react-body-highlighter";
 import type { RecoveryStatus } from "@/types/recovery";
 export type { RecoveryStatus } from "@/types/recovery";
 
@@ -44,6 +45,29 @@ export function getRecoveryFill(pct: number, isDark: boolean): string {
 /** Neutral fill for untrained / no-data muscles */
 export function getNeutralFill(isDark: boolean): string {
   return isDark ? "hsl(50, 4%, 22%)" : "hsl(50, 8%, 82%)";
+}
+
+// CSS specificity: SVG presentation attributes have specificity 0,
+// so a plain CSS rule overrides them without !important.
+export function buildBodyMapCss(
+  entries: Array<{ muscle: string; slug: Slug }>,
+  muscles: Record<string, { recoveryPct: number } | undefined>,
+  isDark: boolean,
+  containerId: string
+): string {
+  const muscleCss = entries
+    .map(({ muscle, slug }) => {
+      const data = muscles[muscle];
+      const color =
+        data != null
+          ? getRecoveryFill(data.recoveryPct, isDark)
+          : getNeutralFill(isDark);
+      return `#${containerId} #${slug} { fill: ${color}; }`;
+    })
+    .join("\n");
+  // Make the SVG fill its container (library hardcodes px dimensions)
+  const sizeCss = `#${containerId} svg { width: 100% !important; height: auto !important; }`;
+  return `${sizeCss}\n${muscleCss}`;
 }
 
 export const STATUS_LABELS: Record<RecoveryStatus, string> = {

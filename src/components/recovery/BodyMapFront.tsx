@@ -1,7 +1,7 @@
 "use client";
 
 import Body, { type Slug } from "@mjcdev/react-body-highlighter";
-import { getRecoveryFill, getNeutralFill } from "./recoveryColors";
+import { buildBodyMapCss } from "./recoveryColors";
 import { useEffect } from "react";
 import { useClientStore } from "@/store/clientStore";
 import type { BodyMapProps } from "@/types/recovery";
@@ -29,29 +29,6 @@ const SLUG_TO_MUSCLE: Record<string, string> = {
   tibialis: "tibialis",
 };
 
-// CSS specificity: SVG presentation attributes have specificity 0,
-// so a plain CSS rule overrides them without !important.
-function buildCss(
-  entries: Array<{ muscle: string; slug: Slug }>,
-  muscles: Record<string, { recoveryPct: number } | undefined>,
-  isDark: boolean,
-  containerId: string
-): string {
-  const muscleCss = entries
-    .map(({ muscle, slug }) => {
-      const data = muscles[muscle];
-      const color =
-        data != null
-          ? getRecoveryFill(data.recoveryPct, isDark)
-          : getNeutralFill(isDark);
-      return `#${containerId} #${slug} { fill: ${color}; }`;
-    })
-    .join("\n");
-  // Make the SVG fill its container (library hardcodes px dimensions)
-  const sizeCss = `#${containerId} svg { width: 100% !important; height: auto !important; }`;
-  return `${sizeCss}\n${muscleCss}`;
-}
-
 // All front-view slugs passed as data so the library activates them
 const FRONT_DATA = FRONT_MUSCLE_MAP.map(({ slug }) => ({ slug, intensity: 1 }));
 
@@ -60,7 +37,7 @@ export function BodyMapFront({ muscles, onSelectMuscle }: BodyMapProps) {
   useEffect(hydrate, [hydrate]);
 
   const containerId = "bm-front";
-  const css = buildCss(FRONT_MUSCLE_MAP, muscles, isDark, containerId);
+  const css = buildBodyMapCss(FRONT_MUSCLE_MAP, muscles, isDark, containerId);
 
   if (!mounted) return <div style={{ aspectRatio: "160 / 340" }} />;
 
