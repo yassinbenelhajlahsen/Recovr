@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FloatingInput } from "@/components/ui/FloatingInput";
 import { MetricsInputs } from "./MetricsInputs";
 import { useAppStore } from "@/store/appStore";
+import { createClient } from "@/lib/supabase/client";
 import type { UnitSystem } from "@/types/user";
 import { resolveHeightToInches, resolveWeightToLbs } from "@/lib/units";
 
@@ -71,18 +72,23 @@ export function OnboardingFlow({ initialName }: { initialName: string }) {
 
   async function finish() {
     setSaving(true);
+    const trimmedName = name.trim() || null;
     const fitnessGoals = customGoal.trim() ? [customGoal.trim()] : goals;
-    await fetch("/api/user/profile", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: name.trim() || null,
-        height_inches: resolveHeightToInches(height, unitSystem),
-        weight_lbs: resolveWeightToLbs(weight, unitSystem),
-        fitness_goals: fitnessGoals,
-        onboarding_completed: true,
+    const supabase = createClient();
+    await Promise.all([
+      fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: trimmedName,
+          height_inches: resolveHeightToInches(height, unitSystem),
+          weight_lbs: resolveWeightToLbs(weight, unitSystem),
+          fitness_goals: fitnessGoals,
+          onboarding_completed: true,
+        }),
       }),
-    });
+      supabase.auth.updateUser({ data: { full_name: trimmedName } }),
+    ]);
     router.push("/dashboard");
     router.refresh();
   }
