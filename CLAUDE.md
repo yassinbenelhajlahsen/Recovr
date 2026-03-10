@@ -97,17 +97,37 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 ## Routing
 
 - `/` → redirects to `/dashboard`
+- `/onboarding` — locked multi-step onboarding (name → body metrics → goal). Server-side gate: redirects to `/dashboard` if already onboarded, redirects to `/auth/signin` if not authed. Dashboard also redirects here if `onboarding_completed` is false.
 - `/dashboard` — the main screen: greeting, log workout CTA, filters, full workout list + recovery panel (DashboardClient)
 - `/recovery` — full recovery page: front+back SVG body maps + tap-to-inspect muscle detail panel
+
+## TypeScript Types
+
+- **All shared types live in `src/types/`** — never define reusable types inline in component or lib files
+- **Rule**: if a type is used by more than one file, or could be, it goes in `src/types/`. Internal one-off types (e.g. a local state shape used nowhere else) may stay inline.
+- **Files**:
+  - `src/types/recovery.ts` — `RecoveryStatus`, `MuscleRecovery`, `BodyMapProps`
+  - `src/types/workout.ts` — `SetEntry`, `ExerciseEntry`, `Exercise`, `WorkoutFormInitialData`, `WorkoutSaveData`, `WorkoutFormProps`, `WorkoutPreview`, `SessionSummaryData`, `SetData`, `ExerciseData`, `WorkoutExerciseData`, `WorkoutDetail`, `Workout`, `DashboardClientProps`
+  - `src/types/user.ts` — `UnitSystem`, `UserProfile`, `Tab`
+  - `src/types/theme.ts` — `Theme`, `ThemeContextValue`
+  - `src/types/ui.ts` — `DrawerProps`, `ModalProps`, `DropdownMenuProps`, `FloatingInputProps`, `UserMenuProps`, `MetricsInputsProps`, `SettingsDrawerProps`, `FitnessTabProps`
+- Import with `import type { Foo } from "@/types/workout"` (always use `import type` for type-only imports)
 
 ## File Structure
 
 ```
 src/
+├── types/
+│   ├── recovery.ts             # RecoveryStatus, MuscleRecovery, BodyMapProps
+│   ├── workout.ts              # All workout/exercise/session types
+│   ├── user.ts                 # UnitSystem, UserProfile, Tab
+│   ├── theme.ts                # Theme, ThemeContextValue
+│   └── ui.ts                   # Component prop interfaces (DrawerProps, ModalProps, etc.)
 ├── app/
 │   ├── layout.tsx              # Root layout (ThemeProvider, Navbar)
 │   ├── page.tsx                # Redirects to /dashboard
 │   ├── dashboard/page.tsx      # Unified main screen (Server Component)
+│   ├── onboarding/page.tsx     # Onboarding gate (Server Component)
 │   ├── auth/
 │   │   ├── signin/page.tsx
 │   │   ├── signup/page.tsx
@@ -119,7 +139,9 @@ src/
 │       ├── workouts/route.ts
 │       ├── workouts/[id]/route.ts
 │       ├── recovery/route.ts   # GET recovery data (uses getClaims())
-│       └── user/sync/route.ts
+│       ├── user/sync/route.ts
+│       ├── user/profile/route.ts # GET + PUT user profile (height, weight, goal, onboarding)
+│       └── user/delete/route.ts  # DELETE user account (Supabase Admin + Prisma cascade)
 ├── components/
 │   ├── DashboardClient.tsx     # Main client component (list + modals + recovery panel)
 │   ├── WorkoutForm.tsx         # Create/edit workout form
@@ -140,7 +162,10 @@ src/
 │   │   ├── MuscleDetailPanel.tsx # Tap-to-inspect muscle stats panel
 │   │   └── recoveryColors.ts  # HSL fill interpolation + status color/label maps
 │   ├── UserMenu.tsx            # Avatar dropdown: theme toggle, settings, sign out
-│   ├── SettingsDrawer.tsx      # Settings drawer: profile (name/email) + mock body metrics + mock goals
+│   ├── MetricsInputs.tsx       # Reusable height/weight input fields (used in onboarding + settings)
+│   ├── OnboardingFlow.tsx      # Multi-step onboarding form (name, body metrics, goal)
+│   ├── settings/
+│   │   └── SettingsDrawer.tsx  # Settings drawer: profile, body metrics, goals (all functional)
 │   └── ui/
 │       ├── Modal.tsx
 │       ├── Drawer.tsx
@@ -148,10 +173,12 @@ src/
 │       ├── FloatingInput.tsx   # Floating label input component
 │       └── PasswordChecklist.tsx # Password validation checklist
 ├── store/
-│   └── workoutStore.ts         # Zustand store (modal state, preview data, session summary)
+│   ├── workoutStore.ts         # Zustand store (modal state, preview data, session summary)
+│   └── appStore.ts             # Zustand store (app-wide: isOnboarding flag)
 ├── lib/
 │   ├── prisma.ts               # Singleton PrismaClient
 │   ├── recovery.ts             # calculateRecovery(userId) — recovery engine (no new DB tables)
+│   ├── units.ts                # Height/weight unit conversion and display utilities
 │   └── supabase/
 │       ├── client.ts           # Browser client
 │       ├── server.ts           # Server client
@@ -171,15 +198,18 @@ prisma/
 
 - **No new DB tables** — computed on-the-fly from last 96h workouts via `calculateRecovery(userId)` in `src/lib/recovery.ts`
 - **Algorithm**: `volume_factor = clamp(volume / 5000, 0.8, 1.5)`, `adjusted_hours = 48 * factor`, `pct = clamp(hours_since / adjusted_hours, 0, 1)`
+- **Multi-workout model**: residual fatigue accumulation — `combinedPct = clamp(1 - sum(1 - pct), 0, 1)` across all workouts in window (not just worst case)
+- **Bodyweight proxy**: `BODYWEIGHT_PROXY = 75` — sets with `weight = 0` count as 75 lbs for volume calculation
+- **Legacy timestamp fix**: midnight UTC timestamps (old workouts) are shifted to noon for accurate recovery aging
 - **Status thresholds**: `recovered` ≥ 0.85, `partial` ≥ 0.45, `fatigued` < 0.45
 - **16 muscle groups**: chest, triceps, shoulders, lower back, hamstrings, glutes, traps, back, biceps, rear shoulders, quadriceps, calves, forearms, core, abs, hip flexors, tibialis
-- **Multi-workout logic**: tracks worst (most fatigued) result per muscle across all workouts in window
 - **SVG body maps**: `@mjcdev/react-body-highlighter` library; `recoveryColors.ts` does HSL interpolation (red→yellow→green) for fill colors
 - **Dashboard integration**: `RecoveryPanel` is a sticky right-column sidebar; recovery data is fetched in parallel with workouts in `dashboard/page.tsx`
 
 ## State Management (Zustand)
 
-- **Store**: `src/store/workoutStore.ts` — manages modal/drawer state, workout preview data, and session summary data
+- **`src/store/workoutStore.ts`** — manages modal/drawer state, workout preview data, and session summary data
+- **`src/store/appStore.ts`** — app-wide state: `isOnboarding` flag (used by Navbar to hide nav links during onboarding flow)
 - **Key types**: `SessionSummaryData` (full workout data for post-save modal), `WorkoutPreview` (summary from list for instant drawer preview)
 - **Pattern — pass data through store, not refetch**: When navigating between views (e.g., form save → summary modal, card click → drawer), pass available data via the store instead of fetching from the API. Components render immediately with the data they have.
   - `SessionSummaryModal`: reads `activeSession` directly from store (no fetch)
@@ -191,10 +221,24 @@ prisma/
 
 - **Avatar button** (top right): 36×36 `rounded-full bg-surface border border-border-subtle`, shows user initials (`text-accent`). Initials derived from `user.user_metadata?.full_name` or first letter of email.
 - **Dropdown** (`UserMenu.tsx`): opens on avatar click via `DropdownMenu` portal. Contains: email header, theme toggle, settings button, sign out. Closes on route change, Escape, click-outside, scroll.
-- **Settings drawer** (`SettingsDrawer.tsx`): right-slide `Drawer` with three sections — Profile (name editable, email read-only), Body Metrics (mock, coming soon), Goals (mock, coming soon). Save button only active when name is changed.
+- **Settings drawer** (`SettingsDrawer.tsx`): right-slide `Drawer` with three sections — Profile (name editable, email read-only), Body Metrics (height/weight), Goals (preset pills + custom text). All sections functional. Navbar lazy-fetches profile via `GET /api/user/profile` when drawer opens. Save calls `PUT /api/user/profile` + `router.refresh()`.
 - **`DropdownMenu`**: `position: fixed` anchored via `getBoundingClientRect()`. Framer Motion scale+fade from top-right (`scale 0.95→1, opacity 0→1, y -6→0`, 150ms). `z-50` (above navbar `z-30` and drawer `z-40`).
 - `ThemeToggle` component is still present but no longer rendered in the navbar — theme is toggled via the dropdown.
 
+## Onboarding
+
+- **Locked multi-step flow** at `/onboarding` — new users cannot bypass (no skip, no close)
+- **3 steps**: Welcome + name → Body metrics (height/weight) → Fitness goal (preset pills + custom)
+- **Server-side gate**: dashboard redirects to `/onboarding` if `onboarding_completed` is false; OAuth callback also checks
+- **Profile fields on User model**: `height_inches` (Int?), `weight_lbs` (Int?), `fitness_goals` (String[]), `onboarding_completed` (Boolean, default false)
+- **Goals**: up to 3 presets (Strength, Hypertrophy, Endurance, Fat Loss) OR 1 custom free text — mutually exclusive
+- **API**: `GET /api/user/profile` (getClaims), `PUT /api/user/profile` (getUser) — shared by both onboarding and settings drawer
+
 ## Environment Variables (.env)
 
-See `.env.example` for required keys.
+See `.env.example` for required keys. Key variables:
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Supabase anon/publishable key
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (used by `/api/user/delete` to call Admin API)
+- `DATABASE_URL` — pooled connection string (PgBouncer, port 6543)
+- `DIRECT_URL` — direct connection string (port 5432, for migrations)
