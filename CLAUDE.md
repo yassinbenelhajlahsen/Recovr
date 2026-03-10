@@ -131,7 +131,9 @@ src/
 └── proxy.ts                    # Next.js 16 proxy — route protection via updateSession()
 prisma/
 ├── schema.prisma               # Data models
-├── seed.ts                     # Default exercises seed
+├── seed.ts                     # Default exercises seed (imports from ./data/exercises.json)
+├── data/
+│   └── exercises.json          # Default exercise library (92 exercises, seeded with user_id: null)
 └── migrations/                 # Migration history
 ```
 
