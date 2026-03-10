@@ -75,8 +75,7 @@ export function RecoveryView({ recovery }: Props) {
                 transition={{ duration: 0.15 }}
                 className="bg-surface border border-border-subtle rounded-xl flex-1 flex flex-col items-center justify-center text-center gap-2"
               >
-                <p className="text-sm text-secondary">Tap a muscle group</p>
-                <p className="text-xs text-muted">to see recovery details</p>
+                <p className="text-sm text-secondary">Tap a muscle group to see details</p>
               </motion.div>
             )}
           </AnimatePresence>
