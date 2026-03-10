@@ -63,7 +63,8 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 
 - **Fonts**: Fraunces (display/headlines, `font-display`), Geist Sans (body/UI, `font-sans`)
 - **Color tokens**: defined as CSS custom properties in `globals.css` (:root + .dark), mapped to Tailwind via `@theme inline`
-- **Semantic classes**: `bg-bg`, `bg-surface`, `bg-elevated`, `text-primary`, `text-secondary`, `text-muted`, `text-accent`, `bg-accent`, `border-border`, `border-border-subtle`, `text-danger`, `text-success`
+- **Semantic classes**: `bg-bg`, `bg-surface`, `bg-elevated`, `text-primary`, `text-secondary`, `text-muted`, `text-accent`, `bg-accent`, `border-border`, `border-border-subtle`, `text-danger`, `text-success`, `text-recovery-yellow`
+- **Recovery yellow token**: `--c-recovery-yellow` = `#B8860B` (light) / `#D4A017` (dark) — used for "partial/recovering" muscle status
 - **Accent color**: terracotta/coral — `#D4552A` (light) / `#E8633A` (dark) — reserved for primary CTAs and interactive highlights
 - **Palette**: warm neutrals (not zinc). Light: off-white `#F7F7F4` bg. Dark: warm black `#0B0B0A` bg
 - **Typography hierarchy**: serif italic headlines (`font-display text-4xl italic`), sans-serif body, uppercase tracking-wider labels for section headers
@@ -83,7 +84,8 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 ## Routing
 
 - `/` → redirects to `/dashboard`
-- `/dashboard` — the main screen: greeting, log workout CTA, filters, full workout list, modals/drawers (DashboardClient)
+- `/dashboard` — the main screen: greeting, log workout CTA, filters, full workout list + recovery panel (DashboardClient)
+- `/recovery` — full recovery page: front+back SVG body maps + tap-to-inspect muscle detail panel
 
 ## File Structure
 
@@ -97,13 +99,16 @@ src/
 │   │   ├── signin/page.tsx
 │   │   ├── signup/page.tsx
 │   │   └── callback/route.ts   # OAuth + email confirmation handler
+│   ├── recovery/
+│   │   └── page.tsx            # Full recovery page (Server Component)
 │   └── api/
 │       ├── exercises/route.ts
 │       ├── workouts/route.ts
 │       ├── workouts/[id]/route.ts
+│       ├── recovery/route.ts   # GET recovery data (uses getClaims())
 │       └── user/sync/route.ts
 ├── components/
-│   ├── DashboardClient.tsx     # Main client component (list + modals)
+│   ├── DashboardClient.tsx     # Main client component (list + modals + recovery panel)
 │   ├── WorkoutForm.tsx         # Create/edit workout form
 │   ├── WorkoutsFilter.tsx      # Search + date range filters
 │   ├── WorkoutDetailDrawer.tsx # Side drawer for workout details
@@ -113,6 +118,14 @@ src/
 │   ├── Navbar.tsx
 │   ├── ThemeProvider.tsx
 │   ├── ThemeToggle.tsx
+│   ├── recovery/
+│   │   ├── RecoveryPanel.tsx   # Dashboard sidebar: dual body maps + status list
+│   │   ├── RecoveryView.tsx    # Full-page recovery view
+│   │   ├── RecoverySummary.tsx # Compact summary widget
+│   │   ├── BodyMapFront.tsx    # Front SVG body map (uses @mjcdev/react-body-highlighter)
+│   │   ├── BodyMapBack.tsx     # Back SVG body map
+│   │   ├── MuscleDetailPanel.tsx # Tap-to-inspect muscle stats panel
+│   │   └── recoveryColors.ts  # HSL fill interpolation + status color/label maps
 │   └── ui/
 │       ├── Modal.tsx
 │       ├── Drawer.tsx
@@ -122,6 +135,7 @@ src/
 │   └── workoutStore.ts         # Zustand store (modal state, preview data, session summary)
 ├── lib/
 │   ├── prisma.ts               # Singleton PrismaClient
+│   ├── recovery.ts             # calculateRecovery(userId) — recovery engine (no new DB tables)
 │   └── supabase/
 │       ├── client.ts           # Browser client
 │       ├── server.ts           # Server client
@@ -136,6 +150,16 @@ prisma/
 │   └── exercises.json          # Default exercise library (92 exercises, seeded with user_id: null)
 └── migrations/                 # Migration history
 ```
+
+## Recovery Engine
+
+- **No new DB tables** — computed on-the-fly from last 96h workouts via `calculateRecovery(userId)` in `src/lib/recovery.ts`
+- **Algorithm**: `volume_factor = clamp(volume / 5000, 0.8, 1.5)`, `adjusted_hours = 48 * factor`, `pct = clamp(hours_since / adjusted_hours, 0, 1)`
+- **Status thresholds**: `recovered` ≥ 0.85, `partial` ≥ 0.45, `fatigued` < 0.45
+- **16 muscle groups**: chest, triceps, shoulders, lower back, hamstrings, glutes, traps, back, biceps, rear shoulders, quadriceps, calves, forearms, core, hip flexors, tibialis
+- **Multi-workout logic**: tracks worst (most fatigued) result per muscle across all workouts in window
+- **SVG body maps**: `@mjcdev/react-body-highlighter` library; `recoveryColors.ts` does HSL interpolation (red→yellow→green) for fill colors
+- **Dashboard integration**: `RecoveryPanel` is a sticky right-column sidebar; recovery data is fetched in parallel with workouts in `dashboard/page.tsx`
 
 ## State Management (Zustand)
 
