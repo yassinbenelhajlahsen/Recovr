@@ -1,28 +1,7 @@
 import { create } from "zustand";
+import type { WorkoutPreview, SessionSummaryData } from "@/types/workout";
 
 type ModalName = "exerciseDrawer" | "sessionSummary";
-
-export type WorkoutPreview = {
-  id: string;
-  date: string;
-  dateFormatted: string;
-  durationMinutes: number | null;
-  notes: string | null;
-  exerciseNames: string[];
-  totalSets: number;
-};
-
-export type SessionSummaryData = {
-  id: string;
-  date: string;
-  duration_minutes: number | null;
-  notes: string | null;
-  workout_exercises: {
-    id: string;
-    exercise: { id: string; name: string; muscle_groups: string[] };
-    sets: { id: string; set_number: number; reps: number; weight: number }[];
-  }[];
-};
 
 interface WorkoutStore {
   activeModal: ModalName | null;
