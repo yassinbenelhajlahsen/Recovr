@@ -9,8 +9,8 @@ type Props = {
   onSearchQueryChange: (q: string) => void;
   searchResults: Exercise[];
   searchLoading: boolean;
-  searchPanelRef: React.RefObject<HTMLDivElement>;
-  searchInputRef: React.RefObject<HTMLInputElement>;
+  searchPanelRef: React.RefObject<HTMLDivElement | null>;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
   exercises: ExerciseEntry[];
   onAddExercise: (ex: Exercise) => void;
   onClose: () => void;
