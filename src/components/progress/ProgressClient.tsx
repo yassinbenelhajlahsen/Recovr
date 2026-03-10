@@ -25,7 +25,7 @@ export function ProgressClient({ exercises, sessionsByExercise, bodyWeightHistor
           Log your first workout to start tracking progress.
         </p>
         <Link
-          href="/dashboard"
+          href="/"
           className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
         >
           Go to Dashboard

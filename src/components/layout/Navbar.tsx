@@ -49,7 +49,7 @@ export function Navbar() {
             </span>
           ) : (
             <Link
-              href={user ? "/dashboard" : "/auth/signin"}
+              href={user ? "/" : "/auth/signin"}
               className="font-display text-xl text-primary tracking-tight"
             >
               Recovr

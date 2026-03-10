@@ -50,9 +50,9 @@ export default function SignInPage() {
     if (error) { setError(error.message); setLoading(false); return; }
     if (data.user) {
       const { onboarding_completed } = await ensureUserInDb(data.user);
-      router.push(onboarding_completed ? "/dashboard" : "/onboarding");
+      router.push(onboarding_completed ? "/" : "/onboarding");
     } else {
-      router.push("/dashboard");
+      router.push("/");
     }
     router.refresh();
   }

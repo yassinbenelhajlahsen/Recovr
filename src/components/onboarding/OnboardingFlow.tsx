@@ -87,7 +87,7 @@ export function OnboardingFlow({ initialName }: { initialName: string }) {
       }),
       supabase.auth.updateUser({ data: { full_name: trimmedName } }),
     ]);
-    router.push("/dashboard");
+    router.push("/");
     router.refresh();
   }
 
