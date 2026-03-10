@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { motion } from "framer-motion";
 import { FloatingInput } from "@/components/ui/FloatingInput";
 import type { UnitSystem } from "@/types/user";
@@ -26,16 +27,36 @@ export function MetricsInputs({
 }: MetricsInputsProps) {
   const isImperial = unitSystem === "imperial";
 
+  const inchesRef = useRef<HTMLInputElement>(null);
+  const weightRef = useRef<HTMLInputElement>(null);
+  const inchesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const ftMatch = height.match(/^(\d*)'(\d*)$/);
   const feet = ftMatch ? ftMatch[1] : "";
   const inches = ftMatch ? ftMatch[2] : "";
 
   function setFeet(v: string) {
-    onHeightChange(`${clampNumeric(v, 7)}'${inches}`);
+    const clamped = clampNumeric(v, 7);
+    onHeightChange(`${clamped}'${inches}`);
+    if (clamped.length >= 1) {
+      inchesRef.current?.focus();
+    }
   }
 
   function setInches(v: string) {
-    onHeightChange(`${feet}'${clampNumeric(v, 11)}`);
+    const clamped = clampNumeric(v, 11);
+    onHeightChange(`${feet}'${clamped}`);
+    if (inchesTimer.current) clearTimeout(inchesTimer.current);
+    if (clamped.length >= 2) {
+      // 10 or 11 — advance immediately
+      weightRef.current?.focus();
+    } else if (clamped === "1") {
+      // Could be the start of 10 or 11 — wait briefly
+      inchesTimer.current = setTimeout(() => weightRef.current?.focus(), 600);
+    } else if (clamped.length === 1) {
+      // 2–9 — always single digit, advance immediately
+      weightRef.current?.focus();
+    }
   }
 
   function switchSystem(s: UnitSystem) {
@@ -98,9 +119,11 @@ export function MetricsInputs({
               type="text"
               label="Height (cm)"
               value={height}
-              onChange={(e) =>
-                onHeightChange(e.target.value.replace(/[^0-9]/g, ""))
-              }
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9]/g, "");
+                onHeightChange(v);
+                if (v.length >= 3) weightRef.current?.focus();
+              }}
               required={false}
               inputMode="numeric"
             />
@@ -125,6 +148,7 @@ export function MetricsInputs({
             onChange={(e) => setInches(e.target.value)}
             required={false}
             inputMode="numeric"
+            inputRef={inchesRef}
           />
         </motion.div>
       </div>
@@ -140,6 +164,7 @@ export function MetricsInputs({
         }
         required={false}
         inputMode="numeric"
+        inputRef={weightRef}
       />
     </div>
   );
