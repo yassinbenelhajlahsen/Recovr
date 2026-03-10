@@ -31,7 +31,7 @@ export function Navbar() {
 
   return (
     <nav className="border-b border-border bg-bg/80 backdrop-blur-md sticky top-0 z-30">
-      <div className="px-4 sm:px-8 h-16 flex items-center justify-between">
+      <div className="px-4 sm:px-8 h-16 flex items-center justify-between relative">
         <Link
           href={user ? "/dashboard" : "/auth/signin"}
           className="font-display text-xl text-primary tracking-tight"
@@ -39,7 +39,7 @@ export function Navbar() {
           Recovr
         </Link>
 
-        <div className="flex items-center gap-1">
+        <div className="absolute right-2 flex items-center gap-1">
           <ThemeToggle />
           {user && (
             <button
