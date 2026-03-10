@@ -82,7 +82,7 @@ export function ExerciseCard({ exercise: ex, onRemoveExercise, onAddSet, onRemov
         </button>
         {ex.equipment === "bodyweight" && (
           <p className="mt-3 text-[11px] text-muted leading-snug">
-            Bodyweight exercise — enter 0 if no extra weight was added, or enter the added weight (e.g. a weighted vest).
+            Enter 0 if no extra weight was added, or enter the added weight (e.g. a weighted vest).
           </p>
         )}
       </div>
