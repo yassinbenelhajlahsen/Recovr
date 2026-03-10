@@ -1,11 +1,12 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import type { MuscleRecovery } from "@/types/recovery";
 import { BodyMapFront } from "./BodyMapFront";
 import { BodyMapBack } from "./BodyMapBack";
 import { MuscleDetailPanel } from "./MuscleDetailPanel";
-import { getRecoveryStatus, STATUS_LABELS, STATUS_COLORS } from "./recoveryColors";
 import { useRecoverySelection } from "./hooks/useRecoverySelection";
+import { WorkoutDetailDrawer } from "@/components/workout/WorkoutDetailDrawer";
 
 type Props = {
   recovery: MuscleRecovery[];
@@ -50,65 +51,38 @@ export function RecoveryView({ recovery }: Props) {
 
         {/* Detail panel — always same height as maps */}
         <div className="lg:w-72 xl:w-80 flex flex-col">
-          {selectedData ? (
-            <MuscleDetailPanel
-              recovery={selectedData}
-              onClose={() => handleSelect(selectedMuscle!)}
-            />
-          ) : (
-            <div className="bg-surface border border-border-subtle rounded-xl flex-1 flex flex-col items-center justify-center text-center gap-2">
-              <p className="text-sm text-secondary">Tap a muscle group</p>
-              <p className="text-xs text-muted">to see recovery details</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Muscle list (always visible on mobile, supplemental on desktop) */}
-      <div className="bg-surface border border-border-subtle rounded-xl overflow-hidden">
-        <p className="text-xs uppercase tracking-widest text-muted px-4 pt-4 pb-2">All Muscle Groups</p>
-        <div className="divide-y divide-border-subtle">
-          {recovery.map((r) => {
-            const status = getRecoveryStatus(r.recoveryPct);
-            const pct = Math.round(r.recoveryPct * 100);
-            return (
-              <button
-                key={r.muscle}
-                onClick={() => handleSelect(r.muscle)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-elevated ${selectedMuscle === r.muscle ? "bg-elevated" : ""}`}
+          <AnimatePresence mode="wait" initial={false}>
+            {selectedData ? (
+              <motion.div
+                key={selectedData.muscle}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="flex-1 flex flex-col min-h-0"
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{
-                      backgroundColor:
-                        status === "recovered"
-                          ? "var(--c-success)"
-                          : status === "partial"
-                            ? "var(--c-recovery-yellow)"
-                            : "var(--c-danger)",
-                    }}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-primary capitalize font-medium">{r.muscle}</p>
-                  {r.lastTrainedAt && (
-                    <p className="text-xs text-muted truncate">
-                      Last trained {formatHours(r.hoursSince)}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[status]}`}>
-                    {STATUS_LABELS[status]}
-                  </span>
-                  <span className="text-xs text-muted w-8 text-right">{pct}%</span>
-                </div>
-              </button>
-            );
-          })}
+                <MuscleDetailPanel
+                  recovery={selectedData}
+                  onClose={() => handleSelect(selectedMuscle!)}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="bg-surface border border-border-subtle rounded-xl flex-1 flex flex-col items-center justify-center text-center gap-2"
+              >
+                <p className="text-sm text-secondary">Tap a muscle group</p>
+                <p className="text-xs text-muted">to see recovery details</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
+      <WorkoutDetailDrawer />
     </div>
   );
 }
@@ -120,13 +94,4 @@ function StatPill({ label, count, colorClass }: { label: string; count: number; 
       <span className="opacity-80">{label}</span>
     </div>
   );
-}
-
-function formatHours(hours: number | null): string {
-  if (hours === null) return "";
-  if (hours < 1) return "less than an hour ago";
-  if (hours < 24) return `${Math.round(hours)}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "yesterday";
-  return `${days} days ago`;
 }

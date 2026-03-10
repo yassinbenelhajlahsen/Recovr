@@ -51,6 +51,8 @@ export async function calculateRecovery(userId: string): Promise<MuscleRecovery[
     select: {
       id: true,
       date: true,
+      duration_minutes: true,
+      notes: true,
       workout_exercises: {
         select: {
           exercise: { select: { name: true, muscle_groups: true, equipment: true } },
@@ -74,6 +76,9 @@ export async function calculateRecovery(userId: string): Promise<MuscleRecovery[
       lastSessionSets: number;
       lastSessionReps: number;
       lastSessionExercises: string[];
+      lastWorkoutId: string;
+      lastWorkoutDuration: number | null;
+      lastWorkoutNotes: string | null;
     }
   >();
 
@@ -145,6 +150,9 @@ export async function calculateRecovery(userId: string): Promise<MuscleRecovery[
         lastSessionSets: existing?.lastSessionSets ?? (muscleSets.get(muscle) ?? 0),
         lastSessionReps: existing?.lastSessionReps ?? (muscleReps.get(muscle) ?? 0),
         lastSessionExercises: existing?.lastSessionExercises ?? (muscleExercises.get(muscle) ?? []),
+        lastWorkoutId: existing?.lastWorkoutId ?? workout.id,
+        lastWorkoutDuration: existing?.lastWorkoutDuration ?? workout.duration_minutes,
+        lastWorkoutNotes: existing?.lastWorkoutNotes ?? workout.notes,
       });
     }
   }
@@ -163,6 +171,9 @@ export async function calculateRecovery(userId: string): Promise<MuscleRecovery[
         lastSessionSets: null,
         lastSessionReps: null,
         lastSessionExercises: [],
+        lastWorkoutId: null,
+        lastWorkoutDuration: null,
+        lastWorkoutNotes: null,
       };
     }
     return {
@@ -175,6 +186,9 @@ export async function calculateRecovery(userId: string): Promise<MuscleRecovery[
       lastSessionSets: data.lastSessionSets,
       lastSessionReps: data.lastSessionReps,
       lastSessionExercises: data.lastSessionExercises,
+      lastWorkoutId: data.lastWorkoutId,
+      lastWorkoutDuration: data.lastWorkoutDuration,
+      lastWorkoutNotes: data.lastWorkoutNotes,
     };
   });
 }

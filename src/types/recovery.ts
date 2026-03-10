@@ -10,6 +10,9 @@ export type MuscleRecovery = {
   lastSessionSets: number | null;
   lastSessionReps: number | null;
   lastSessionExercises: string[];
+  lastWorkoutId: string | null;
+  lastWorkoutDuration: number | null;
+  lastWorkoutNotes: string | null;
 };
 
 export type BodyMapProps = {

@@ -41,7 +41,7 @@ export type WorkoutSaveData = {
   notes: string | null;
   workout_exercises: {
     id: string;
-    exercise: { id: string; name: string; muscle_groups: string[] };
+    exercise: { id: string; name: string; muscle_groups: string[]; equipment: string | null };
     sets: { id: string; set_number: number; reps: number; weight: number }[];
   }[];
 };
@@ -71,7 +71,7 @@ export type SessionSummaryData = {
   notes: string | null;
   workout_exercises: {
     id: string;
-    exercise: { id: string; name: string; muscle_groups: string[] };
+    exercise: { id: string; name: string; muscle_groups: string[]; equipment: string | null };
     sets: { id: string; set_number: number; reps: number; weight: number }[];
   }[];
 };

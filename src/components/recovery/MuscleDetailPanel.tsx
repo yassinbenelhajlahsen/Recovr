@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { MuscleRecovery } from "@/lib/recovery";
 import { STATUS_LABELS, STATUS_COLORS } from "./recoveryColors";
+import { useWorkoutStore } from "@/store/workoutStore";
 
 type Props = {
   recovery: MuscleRecovery;
@@ -42,8 +43,11 @@ export function MuscleDetailPanel({ recovery, onClose }: Props) {
     lastSessionSets,
     lastSessionReps,
     lastSessionExercises,
+    lastWorkoutDuration,
+    lastWorkoutNotes,
   } = recovery;
 
+  const openDrawer = useWorkoutStore((s) => s.openDrawer);
   const [clientNow, setClientNow] = useState<number | null>(null);
   /* eslint-disable react-hooks/set-state-in-effect -- client-only mount detection for relative time display */
   useEffect(() => { setClientNow(Date.now()); }, []);
@@ -99,11 +103,10 @@ export function MuscleDetailPanel({ recovery, onClose }: Props) {
 
       {/* Last trained info */}
       {lastTrainedAt ? (
-        <div className="flex flex-col gap-3">
+        <>
           <div>
             <p className="text-xs text-muted uppercase tracking-widest mb-1">Last trained</p>
             <p className="text-sm text-primary font-medium">{clientNow ? formatRelativeTime(lastTrainedAt, clientNow) : formatDate(lastTrainedAt)}</p>
-            
             {clientNow && <p className="text-xs text-secondary">{formatDate(lastTrainedAt)}</p>}
           </div>
 
@@ -141,7 +144,42 @@ export function MuscleDetailPanel({ recovery, onClose }: Props) {
               </div>
             </div>
           )}
-        </div>
+
+          {/* Last workout card — pinned to bottom */}
+          {recovery.lastWorkoutId && (
+            <div className="mt-auto pt-2">
+              <button
+                onClick={() => openDrawer(recovery.lastWorkoutId!)}
+                className="group w-full text-left rounded-xl bg-elevated border border-border-subtle px-4 py-3.5 hover:bg-bg hover:shadow-md transition-all"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold text-sm text-primary group-hover:text-accent transition-colors">
+                        {clientNow ? formatRelativeTime(lastTrainedAt, clientNow) : formatDate(lastTrainedAt)}
+                      </p>
+                      {lastWorkoutDuration && (
+                        <span className="text-xs text-muted bg-surface rounded-md px-2 py-0.5 tabular-nums">
+                          {lastWorkoutDuration} min
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-secondary truncate">
+                      {lastSessionExercises.join(", ")}
+                    </p>
+                    {lastWorkoutNotes && !lastWorkoutNotes.includes("[seed]") && (
+                      <p className="text-xs text-muted mt-1 truncate italic">{lastWorkoutNotes}</p>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xl font-bold text-primary tabular-nums leading-none">{lastSessionSets}</p>
+                    <p className="text-xs text-muted mt-0.5">{lastSessionSets === 1 ? "set" : "sets"}</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="py-2">
           <p className="text-sm text-secondary">No training data in the last 4 days.</p>

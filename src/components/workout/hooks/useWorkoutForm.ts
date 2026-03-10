@@ -121,7 +121,7 @@ export function useWorkoutForm({
           notes: notes || null,
           workout_exercises: exercises.map((ex, i) => ({
             id: `local-we-${i}`,
-            exercise: { id: ex.exercise_id, name: ex.exercise_name, muscle_groups: ex.muscle_groups },
+            exercise: { id: ex.exercise_id, name: ex.exercise_name, muscle_groups: ex.muscle_groups, equipment: ex.equipment ?? null },
             sets: ex.sets.map((s) => ({
               id: s.id,
               set_number: s.set_number,

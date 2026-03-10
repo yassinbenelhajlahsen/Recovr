@@ -175,11 +175,11 @@ src/
 │   │       └── useWorkoutForm.ts    # Form state (date/notes/duration/saving/error), handleSubmit, createCustomExercise
 │   ├── recovery/
 │   │   ├── RecoveryPanel.tsx   # Dashboard sidebar: dual body maps + stat pills only (view-only, links to /recovery)
-│   │   ├── RecoveryView.tsx    # Full-page recovery view
+│   │   ├── RecoveryView.tsx    # Full-page recovery view; mounts WorkoutDetailDrawer so muscle panel can open workouts
 │   │   ├── RecoverySummary.tsx # Compact summary widget
 │   │   ├── BodyMapFront.tsx    # Front SVG body map (uses @mjcdev/react-body-highlighter)
 │   │   ├── BodyMapBack.tsx     # Back SVG body map
-│   │   ├── MuscleDetailPanel.tsx # Tap-to-inspect muscle stats panel
+│   │   ├── MuscleDetailPanel.tsx # Tap-to-inspect muscle stats panel; AnimatePresence transition on muscle switch (keyed by muscle in RecoveryView); clickable last-workout card pinned to bottom (mt-auto) opens WorkoutDetailDrawer
 │   │   ├── recoveryColors.ts  # HSL fill interpolation, status color/label maps, buildBodyMapCss
 │   │   └── hooks/
 │   │       └── useRecoverySelection.ts # selectedMuscle state, handleSelect toggle, muscleMap, status counts
@@ -248,9 +248,10 @@ prisma/
 ## Recovery Engine
 
 - **No new DB tables** — computed on-the-fly from last 96h workouts via `calculateRecovery(userId)` in `src/lib/recovery.ts`
-- **Algorithm**: `volume_factor = clamp(volume / 5000, 0.8, 1.5)`, `adjusted_hours = 48 * factor`, `pct = clamp(hours_since / adjusted_hours, 0, 1)`
+- **Algorithm**: `volume_factor = clamp(volume / 2500, 0.8, 1.5)`, `adjusted_hours = 48 * factor`, `pct = clamp(hours_since / adjusted_hours, 0, 1)`
 - **Multi-workout model**: residual fatigue accumulation — `combinedPct = clamp(1 - sum(1 - pct), 0, 1)` across all workouts in window (not just worst case)
-- **Bodyweight proxy**: `BODYWEIGHT_PROXY = 75` — sets with `weight = 0` count as 75 lbs for volume calculation
+- **Bodyweight proxy**: `BODYWEIGHT_PROXY = 75` — bodyweight exercises (`equipment = "bodyweight"`) always add 75 lbs base; if extra weight logged (e.g. weighted dips at 25 lbs), volume = `reps * (75 + 25)`. Non-bodyweight sets with weight = 0 also fall back to 75.
+- **`MuscleRecovery` includes workout metadata**: `lastWorkoutId`, `lastWorkoutDuration`, `lastWorkoutNotes` — used by `MuscleDetailPanel` to render a clickable workout card
 - **Legacy timestamp fix**: midnight UTC timestamps (old workouts) are shifted to noon for accurate recovery aging
 - **Status thresholds**: `recovered` ≥ 0.85, `partial` ≥ 0.45, `fatigued` < 0.45
 - **16 muscle groups**: chest, triceps, shoulders, lower back, hamstrings, glutes, traps, back, biceps, rear shoulders, quadriceps, calves, forearms, core, abs, hip flexors, tibialis
