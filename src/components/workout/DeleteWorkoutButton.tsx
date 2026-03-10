@@ -51,7 +51,7 @@ export function DeleteWorkoutButton({
       className={`text-sm font-medium rounded-lg px-3.5 py-2 border transition-colors disabled:opacity-50 ${
         confirming
           ? "text-danger border-danger/40 bg-danger/5 hover:bg-danger/10"
-          : "text-muted border-border hover:text-danger hover:border-danger/30"
+          : "text-primary border-border hover:text-danger hover:border-danger/40"
       }`}
     >
       {loading ? "Deleting…" : confirming ? "Confirm?" : "Delete"}
