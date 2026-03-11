@@ -6,16 +6,16 @@
 /* ─── Design tokens ─── */
 
 :root {
-  --c-bg: #F7F7F4;
-  --c-surface: #EEEEE9;
-  --c-elevated: #FFFFFF;
-  --c-text: #111110;
-  --c-text-2: #5C5C57;
-  --c-text-3: #8A8A84;
-  --c-accent: #D4552A;
-  --c-accent-hover: #B84722;
-  --c-border: #DDDDD7;
-  --c-border-subtle: #E8E8E3;
+  --c-bg: #f5f0eb;
+  --c-surface: #ede8e2;
+  --c-elevated: #ffffff;
+  --c-text: #1a1a1a;
+  --c-text-2: #666360;
+  --c-text-3: #9e9b97;
+  --c-accent: #d97757;
+  --c-accent-hover: #c4653f;
+  --c-border: #c4bdb5;
+  --c-border-subtle: #d9d4ce;
   /* Match hue/sat of SVG fill anchors; darker lightness for readable text */
   --c-danger: hsl(5, 48%, 42%);
   --c-success: hsl(150, 35%, 36%);
