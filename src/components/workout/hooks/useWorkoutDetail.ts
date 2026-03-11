@@ -21,7 +21,7 @@ export function useWorkoutDetail(
   const fetchWorkout = useCallback(async (id: string) => {
     try {
       const r = await fetch(`/api/workouts/${id}`);
-      setWorkout(await r.json());
+      if (r.ok) setWorkout(await r.json());
     } finally {
       setLoading(false);
     }
