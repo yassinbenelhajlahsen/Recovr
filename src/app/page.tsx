@@ -30,7 +30,7 @@ function resolveDatePreset(preset: string | undefined): { from?: Date; to?: Date
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; datePreset?: string; muscles?: string }>;
+  searchParams: Promise<{ search?: string; datePreset?: string; muscles?: string; draft?: string }>;
 }) {
   const supabase = await createClient();
   const { data: claims, error } = await supabase.auth.getClaims();
@@ -40,7 +40,7 @@ export default async function DashboardPage({
   const userId = claims.claims.sub as string;
   const userEmail = claims.claims.email as string;
 
-  const { search = "", datePreset, muscles: musclesParam } = await searchParams;
+  const { search = "", datePreset, muscles: musclesParam, draft } = await searchParams;
   const muscles = musclesParam ? musclesParam.split(",").filter(Boolean) : [];
   const { from, to } = resolveDatePreset(datePreset);
 
@@ -111,6 +111,7 @@ export default async function DashboardPage({
     notes: w.notes,
     exerciseNames: w.workout_exercises.map((we) => we.exercise.name),
     totalSets: w.workout_exercises.reduce((sum, we) => sum + we.sets.length, 0),
+    isDraft: w.is_draft,
   }));
 
   const hasFilters = !!(search || datePreset || muscles.length);
@@ -121,6 +122,7 @@ export default async function DashboardPage({
       workouts={serializedWorkouts}
       hasFilters={hasFilters}
       recovery={recovery}
+      openDraftId={draft}
     />
   );
 }

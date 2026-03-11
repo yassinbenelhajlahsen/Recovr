@@ -15,7 +15,7 @@ export default async function ProgressPage() {
   // Fetch distinct exercises, sessions, and body weight history in parallel
   const [rawExercises, rawSessions, rawBodyWeight] = await Promise.all([
     prisma.workoutExercise.findMany({
-      where: { workout: { user_id: userId } },
+      where: { workout: { user_id: userId, is_draft: false } },
       select: {
         exercise_id: true,
         exercise: { select: { id: true, name: true } },
@@ -23,7 +23,7 @@ export default async function ProgressPage() {
       distinct: ["exercise_id"],
     }),
     prisma.workoutExercise.findMany({
-      where: { workout: { user_id: userId } },
+      where: { workout: { user_id: userId, is_draft: false } },
       select: {
         exercise_id: true,
         workout: { select: { date: true } },
@@ -32,7 +32,7 @@ export default async function ProgressPage() {
       orderBy: { workout: { date: "asc" } },
     }),
     prisma.workout.findMany({
-      where: { user_id: userId, body_weight: { not: null } },
+      where: { user_id: userId, is_draft: false, body_weight: { not: null } },
       select: { date: true, body_weight: true },
       orderBy: { date: "asc" },
     }),
