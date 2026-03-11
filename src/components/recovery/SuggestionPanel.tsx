@@ -51,8 +51,11 @@ const PRESET_GROUPS = [
   },
 ];
 
+// Number of skeleton exercise cards to show while streaming
+const SKELETON_EXERCISE_COUNT = 4;
+
 export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
-  const { suggestion, isLoading, error, generate, dismiss, cooldownLabel, draftId, setDraftId, isInitializing } = useSuggestion();
+  const { suggestion, isLoading, isStreaming, error, generate, dismiss, cooldownLabel, draftId, setDraftId, isInitializing } = useSuggestion();
   const { saveDraft, saving, saveError } = useSaveDraft();
   const openDrawer = useWorkoutStore((s) => s.openDrawer);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -107,6 +110,11 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
     [recovery],
   );
 
+  // Remaining skeleton cards to show while streaming
+  const remainingSkeletons = isStreaming
+    ? Math.max(0, SKELETON_EXERCISE_COUNT - (suggestion?.exercises.length ?? 0))
+    : 0;
+
   return (
     <div className="flex-1 flex flex-col h-full">
       <AnimatePresence mode="wait" initial={false}>
@@ -119,7 +127,8 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
             transition={{ duration: 0.1 }}
             className="flex-1"
           />
-        ) : isLoading ? (
+        ) : isLoading && !suggestion ? (
+          // Pure skeleton — before any streamed content arrives
           <motion.div
             key="loading"
             initial={{ opacity: 0 }}
@@ -154,48 +163,59 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
             {/* Exercise skeletons */}
             <div className="flex flex-col gap-3">
               <div className="skeleton h-3 w-20 rounded" />
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2.5"
-                >
-                  <div className="flex justify-between">
-                    <div className="skeleton h-4 w-2/5 rounded" />
-                    <div className="skeleton h-4 w-1/4 rounded" />
-                  </div>
-                  <div className="flex gap-1.5">
-                    <div className="skeleton h-5 w-14 rounded-full" />
-                    <div className="skeleton h-5 w-16 rounded-full" />
-                  </div>
-                </div>
+              {[...Array(SKELETON_EXERCISE_COUNT)].map((_, i) => (
+                <ExerciseSkeleton key={i} />
               ))}
             </div>
           </motion.div>
         ) : suggestion ? (
+          // Result view — used for both streaming (partial) and complete states
+          // Same key="result" prevents exit/enter animation when stream finishes
           <motion.div
             key="result"
-            initial={{ opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0, x: -12 }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className="flex-1 flex flex-col overflow-hidden"
           >
             {/* Plan header */}
             <div className="px-6 pt-6 pb-5 border-b border-border-subtle">
               <div className="flex items-start justify-between gap-3 mb-3">
-                <h2 className="font-display text-2xl text-primary italic leading-tight">
-                  {suggestion.title}
-                </h2>
+                {/* Title — real or skeleton */}
+                {suggestion.title ? (
+                  <motion.h2
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="font-display text-2xl text-primary italic leading-tight"
+                  >
+                    {suggestion.title}
+                  </motion.h2>
+                ) : (
+                  <div className="skeleton h-7 w-2/3 rounded" />
+                )}
+
+                {/* estimatedMinutes badge — real or skeleton */}
                 <div className="flex flex-col items-end gap-1.5 shrink-0 mt-1">
-                  <span className="text-xs bg-surface border border-border-subtle text-muted px-2.5 py-1 rounded-full tabular-nums">
-                    ~{suggestion.estimatedMinutes}m
-                  </span>
-                  {cooldownLabel && (
+                  {suggestion.estimatedMinutes ? (
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-xs bg-surface border border-border-subtle text-muted px-2.5 py-1 rounded-full tabular-nums"
+                    >
+                      ~{suggestion.estimatedMinutes}m
+                    </motion.span>
+                  ) : (
+                    <div className="skeleton h-6 w-14 rounded-full" />
+                  )}
+                  {cooldownLabel && !isStreaming && (
                     <span className="text-s text-muted/70 tabular-nums">
                       New in {cooldownLabel}
                     </span>
                   )}
-                  {isDev && cooldownLabel && (
+                  {isDev && cooldownLabel && !isStreaming && (
                     <button
                       onClick={handleDevReset}
                       className="text-xs text-danger/60 hover:text-danger transition-colors tabular-nums"
@@ -206,55 +226,83 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                   )}
                 </div>
               </div>
-              <p className="text-sm text-secondary leading-relaxed">
-                {suggestion.rationale}
-              </p>
+
+              {/* Rationale — real or skeleton */}
+              {suggestion.rationale ? (
+                <motion.p
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="text-sm text-secondary leading-relaxed"
+                >
+                  {suggestion.rationale}
+                </motion.p>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="skeleton h-4 w-full rounded" />
+                  <div className="skeleton h-4 w-4/5 rounded" />
+                </div>
+              )}
             </div>
 
             {/* Exercise list — scrollable */}
             <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5">
               <p className="text-xs uppercase tracking-widest text-muted font-medium mb-3">
-                Exercises · {suggestion.exercises.length}
+                Exercises{!isStreaming && suggestion.exercises.length > 0 ? ` · ${suggestion.exercises.length}` : ""}
               </p>
               <div className="flex flex-col gap-2.5">
+                {/* Real exercises that have arrived */}
                 {suggestion.exercises.map((ex, i) => (
                   <ExerciseCard key={i} exercise={ex} index={i} />
+                ))}
+                {/* Remaining skeleton cards while streaming */}
+                {[...Array(remainingSkeletons)].map((_, i) => (
+                  <ExerciseSkeleton key={`skel-${i}`} />
                 ))}
               </div>
             </div>
 
-            {/* Sticky footer */}
-            <div className="w-full border-t border-border-subtle bg-elevated shrink-0">
-              {saveError && (
-                <p className="text-xs text-danger text-center px-4 pt-3">
-                  {saveError}
-                </p>
-              )}
-              <div className="flex">
-                <button
-                  onClick={handleDismiss}
-                  className="flex-1 text-md font-medium text-muted py-4 hover:text-secondary hover:bg-surface transition-colors border-r border-border-subtle"
+            {/* Sticky footer — only shown when stream is complete */}
+            <AnimatePresence>
+              {!isStreaming && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.25, delay: 0.1 }}
+                  className="w-full border-t border-border-subtle bg-elevated shrink-0"
                 >
-                  Dismiss
-                </button>
-                {draftId ? (
-                  <button
-                    onClick={handleGoToWorkout}
-                    className="flex-1 text-md font-medium text-accent py-4 hover:bg-surface transition-colors"
-                  >
-                    View workout
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleSaveAsDraft}
-                    disabled={saving}
-                    className="flex-1 text-md font-medium text-accent py-4 hover:bg-surface transition-colors disabled:opacity-50"
-                  >
-                    {saving ? "Saving..." : "Save as Draft"}
-                  </button>
-                )}
-              </div>
-            </div>
+                  {saveError && (
+                    <p className="text-xs text-danger text-center px-4 pt-3">
+                      {saveError}
+                    </p>
+                  )}
+                  <div className="flex">
+                    <button
+                      onClick={handleDismiss}
+                      className="flex-1 text-md font-medium text-muted py-4 hover:text-secondary hover:bg-surface transition-colors border-r border-border-subtle"
+                    >
+                      Dismiss
+                    </button>
+                    {draftId ? (
+                      <button
+                        onClick={handleGoToWorkout}
+                        className="flex-1 text-md font-medium text-accent py-4 hover:bg-surface transition-colors"
+                      >
+                        View workout
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleSaveAsDraft}
+                        disabled={saving}
+                        className="flex-1 text-md font-medium text-accent py-4 hover:bg-surface transition-colors disabled:opacity-50"
+                      >
+                        {saving ? "Saving..." : "Save as Draft"}
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         ) : (
           <motion.div
@@ -359,6 +407,21 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function ExerciseSkeleton() {
+  return (
+    <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2.5">
+      <div className="flex justify-between">
+        <div className="skeleton h-4 w-2/5 rounded" />
+        <div className="skeleton h-4 w-1/4 rounded" />
+      </div>
+      <div className="flex gap-1.5">
+        <div className="skeleton h-5 w-14 rounded-full" />
+        <div className="skeleton h-5 w-16 rounded-full" />
+      </div>
     </div>
   );
 }

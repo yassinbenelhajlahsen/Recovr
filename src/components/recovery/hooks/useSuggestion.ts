@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { WorkoutSuggestion } from "@/types/suggestion";
+import type { WorkoutSuggestion, SuggestedExercise, SuggestionStreamEvent } from "@/types/suggestion";
 
 type SuggestionState = {
   suggestion: WorkoutSuggestion | null;
   isLoading: boolean;
   error: string | null;
+};
+
+type PartialSuggestion = {
+  title?: string;
+  rationale?: string;
+  estimatedMinutes?: number;
+  exercises: SuggestedExercise[];
 };
 
 function formatCooldown(seconds: number): string {
@@ -65,11 +72,74 @@ export function useSuggestion() {
     };
   }, [isCooldownActive]);
 
+  async function readStream(res: Response) {
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let lineBuffer = "";
+    const partial: PartialSuggestion = { exercises: [] };
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        lineBuffer += decoder.decode(value, { stream: true });
+        const lines = lineBuffer.split("\n");
+        lineBuffer = lines.pop()!; // Keep incomplete last line
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let event: SuggestionStreamEvent;
+          try {
+            event = JSON.parse(line) as SuggestionStreamEvent;
+          } catch {
+            continue; // skip malformed line
+          }
+
+          switch (event.type) {
+            case "meta":
+              if (typeof event.cooldown === "number" && event.cooldown > 0) {
+                setCooldownSeconds(event.cooldown);
+              }
+              break;
+            case "title":
+              partial.title = event.value;
+              setState({ suggestion: { ...partial } as WorkoutSuggestion, isLoading: true, error: null });
+              break;
+            case "rationale":
+              partial.rationale = event.value;
+              setState({ suggestion: { ...partial } as WorkoutSuggestion, isLoading: true, error: null });
+              break;
+            case "estimatedMinutes":
+              partial.estimatedMinutes = event.value;
+              setState({ suggestion: { ...partial } as WorkoutSuggestion, isLoading: true, error: null });
+              break;
+            case "exercise":
+              partial.exercises = [...partial.exercises, event.value];
+              setState({ suggestion: { ...partial } as WorkoutSuggestion, isLoading: true, error: null });
+              break;
+            case "done":
+              setState({ suggestion: { ...partial } as WorkoutSuggestion, isLoading: false, error: null });
+              break;
+            case "error":
+              setState({ suggestion: null, isLoading: false, error: event.message });
+              break;
+          }
+        }
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      throw err;
+    }
+  }
+
   async function generate(selectedPresets?: string[]) {
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
     setState({ suggestion: null, isLoading: true, error: null });
+    setDraftId(null);
+
     try {
       const res = await fetch("/api/suggest", {
         method: "POST",
@@ -77,22 +147,31 @@ export function useSuggestion() {
         body: JSON.stringify({ selectedPresets: selectedPresets?.length ? selectedPresets : undefined }),
         signal: abortRef.current.signal,
       });
-      const data = await res.json();
+
       if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
         setState({ suggestion: null, isLoading: false, error: data.error ?? "Something went wrong" });
         return;
       }
-      const { _cooldown, _cached: _c, _draftId, ...suggestion } = data;
-      if (typeof _cooldown === "number" && _cooldown > 0) {
-        setCooldownSeconds(_cooldown);
+
+      const contentType = res.headers.get("Content-Type") ?? "";
+
+      if (contentType.includes("application/json")) {
+        // Cached response — instant JSON path
+        const data = await res.json();
+        const { _cooldown, _cached: _c, _draftId, ...suggestion } = data;
+        if (typeof _cooldown === "number" && _cooldown > 0) {
+          setCooldownSeconds(_cooldown);
+        }
+        if (_draftId) {
+          setDraftId(_draftId as string);
+        }
+        setState({ suggestion: suggestion as WorkoutSuggestion, isLoading: false, error: null });
+        return;
       }
-      if (_draftId) {
-        setDraftId(_draftId as string);
-      } else {
-        // New suggestion generated — reset any stale draft association
-        setDraftId(null);
-      }
-      setState({ suggestion: suggestion as WorkoutSuggestion, isLoading: false, error: null });
+
+      // Streaming NDJSON path
+      await readStream(res);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setState({ suggestion: null, isLoading: false, error: "Failed to connect. Please try again." });
@@ -105,6 +184,7 @@ export function useSuggestion() {
   }
 
   const cooldownLabel = cooldownSeconds > 0 ? formatCooldown(cooldownSeconds) : null;
+  const isStreaming = state.isLoading && state.suggestion !== null;
 
-  return { ...state, generate, dismiss, cooldownSeconds, cooldownLabel, draftId, setDraftId, isInitializing };
+  return { ...state, generate, dismiss, cooldownSeconds, cooldownLabel, draftId, setDraftId, isInitializing, isStreaming };
 }

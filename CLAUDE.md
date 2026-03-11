@@ -140,9 +140,13 @@ src/
 ### AI Suggestions (`/recovery` page)
 
 - `SuggestionTrigger` (server-rendered, receives recovery data) opens a `size="lg"` Drawer
-- `SuggestionPanel` + `useSuggestion` hook handle idle/loading/result states; hook uses AbortController to cancel in-flight requests on dismiss
+- `SuggestionPanel` + `useSuggestion` hook handle idle/loading/streaming/result states; hook uses AbortController to cancel in-flight requests on dismiss
 - API route `POST /api/suggest` calls OpenAI via singleton `src/lib/openai.ts`; do NOT trust client-supplied recovery data — always recompute server-side
-- Wrap OpenAI calls in try/catch and JSON.parse in try/catch — AI can return errors or malformed JSON
+- **Streaming**: `POST /api/suggest` uses `stream: true` and returns `text/x-ndjson`. Each line is a `SuggestionStreamEvent` (defined in `src/types/suggestion.ts`): `meta | title | rationale | estimatedMinutes | exercise | done | error`. Cache hits still return instant `application/json` (no streaming).
+- `useSuggestion` reads the NDJSON stream line-by-line via `ReadableStream`, building a `PartialSuggestion` and calling `setState` on each event. Detects response type via `Content-Type` header to handle both paths.
+- `isStreaming` flag (`state.isLoading && state.suggestion !== null`) drives progressive UI: skeleton cards fill to 4 while exercises arrive, footer hidden until stream completes, scalar fields (title/rationale/minutes) animate in individually.
+- Server-side: `extractExercises(buffer, alreadyEmitted)` rescans the full accumulated buffer from the exercises array start on each chunk — avoids incremental-state bugs from chunk-boundary splits.
+- `SuggestionStreamEvent` types in `src/types/suggestion.ts` — import from there, not inline.
 - Result footer has "Dismiss" + "Save as Draft" split buttons; `useSaveDraft` hook in `recovery/hooks/useSaveDraft.ts` POSTs to `/api/workouts/draft`
 
 ### Workout Drafts
