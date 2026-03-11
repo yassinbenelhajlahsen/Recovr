@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { SparklesIcon } from "@/components/ui/icons";
+import { SparklesIcon, AsteriskIcon } from "@/components/ui/icons";
 import { useSuggestion } from "./hooks/useSuggestion";
 import { useSaveDraft } from "./hooks/useSaveDraft";
 import type { SuggestedExercise } from "@/types/suggestion";
@@ -16,14 +16,15 @@ interface SuggestionPanelProps {
 
 const STATUS_ORDER: Record<RecoveryStatus, number> = {
   recovered: 0,
-  partial:   1,
-  fatigued:  2,
+  partial: 1,
+  fatigued: 2,
 };
 
 const STATUS_PILL: Record<RecoveryStatus, string> = {
   recovered: "text-success bg-success/10 border-success/20",
-  partial:   "text-recovery-yellow bg-recovery-yellow/10 border-recovery-yellow/20",
-  fatigued:  "text-danger bg-danger/10 border-danger/20",
+  partial:
+    "text-recovery-yellow bg-recovery-yellow/10 border-recovery-yellow/20",
+  fatigued: "text-danger bg-danger/10 border-danger/20",
 };
 
 const PRESET_GROUPS = [
@@ -37,7 +38,12 @@ const PRESET_GROUPS = [
   },
   {
     label: "Equipment",
-    options: ["No equipment", "Dumbbells only", "Barbell + rack", "Cable machine"],
+    options: [
+      "No equipment",
+      "Dumbbells only",
+      "Barbell + rack",
+      "Cable machine",
+    ],
   },
   {
     label: "Style",
@@ -75,8 +81,11 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
 
   // Sorted: recovered first, then partial, then fatigued
   const sortedMuscles = useMemo(
-    () => [...recovery].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]),
-    [recovery]
+    () =>
+      [...recovery].sort(
+        (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status],
+      ),
+    [recovery],
   );
 
   return (
@@ -97,7 +106,7 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
               >
-                <SparklesIcon />
+                <AsteriskIcon />
               </motion.div>
               <p className="text-xs uppercase tracking-widest font-medium text-muted">
                 Analyzing...
@@ -118,7 +127,10 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
             <div className="flex flex-col gap-3">
               <div className="skeleton h-3 w-20 rounded" />
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2.5">
+                <div
+                  key={i}
+                  className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2.5"
+                >
                   <div className="flex justify-between">
                     <div className="skeleton h-4 w-2/5 rounded" />
                     <div className="skeleton h-4 w-1/4 rounded" />
@@ -170,7 +182,9 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
             {/* Sticky footer */}
             <div className="w-full border-t border-border-subtle bg-elevated shrink-0">
               {saveError && (
-                <p className="text-xs text-danger text-center px-4 pt-3">{saveError}</p>
+                <p className="text-xs text-danger text-center px-4 pt-3">
+                  {saveError}
+                </p>
               )}
               <div className="flex">
                 <button
@@ -224,7 +238,11 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                     key={m.muscle}
                     initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.14, delay: i * 0.022, ease: "easeOut" }}
+                    transition={{
+                      duration: 0.14,
+                      delay: i * 0.022,
+                      ease: "easeOut",
+                    }}
                     className={`text-xs px-2.5 py-1 rounded-full border capitalize ${STATUS_PILL[m.status]}`}
                   >
                     {m.muscle}
@@ -248,7 +266,11 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                           key={option}
                           onClick={() => togglePreset(option)}
                           whileTap={{ scale: 0.92 }}
-                          transition={{ type: "spring", stiffness: 400, damping: 18 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 400,
+                            damping: 18,
+                          }}
                           className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors duration-150 ${
                             active
                               ? "bg-accent text-white border-accent"
@@ -272,7 +294,9 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                 </p>
               )}
               <button
-                onClick={() => generate(selected.size > 0 ? Array.from(selected) : undefined)}
+                onClick={() =>
+                  generate(selected.size > 0 ? Array.from(selected) : undefined)
+                }
                 className="w-full bg-accent text-white text-sm font-medium rounded-xl px-4 py-3 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 <SparklesIcon />
@@ -286,7 +310,13 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
   );
 }
 
-function ExerciseCard({ exercise, index }: { exercise: SuggestedExercise; index: number }) {
+function ExerciseCard({
+  exercise,
+  index,
+}: {
+  exercise: SuggestedExercise;
+  index: number;
+}) {
   const setsSummary = (() => {
     if (!exercise.sets.length) return "";
     const first = exercise.sets[0];
@@ -295,7 +325,8 @@ function ExerciseCard({ exercise, index }: { exercise: SuggestedExercise; index:
     const count = exercise.sets.length;
 
     if (allSameReps && allSameWeight) {
-      const weightLabel = first.weight == null ? "bodyweight" : `${first.weight} lbs`;
+      const weightLabel =
+        first.weight == null ? "bodyweight" : `${first.weight} lbs`;
       return `${count} × ${first.reps} @ ${weightLabel}`;
     }
     return exercise.sets
@@ -311,9 +342,13 @@ function ExerciseCard({ exercise, index }: { exercise: SuggestedExercise; index:
       className="bg-surface border border-border-subtle rounded-xl px-4 py-3.5"
     >
       <div className="flex items-start justify-between gap-2 mb-2">
-        <p className="text-sm font-medium text-primary leading-snug">{exercise.name}</p>
+        <p className="text-sm font-medium text-primary leading-snug">
+          {exercise.name}
+        </p>
         {setsSummary && (
-          <span className="text-xs text-muted shrink-0 tabular-nums mt-0.5">{setsSummary}</span>
+          <span className="text-xs text-muted shrink-0 tabular-nums mt-0.5">
+            {setsSummary}
+          </span>
         )}
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -327,7 +362,9 @@ function ExerciseCard({ exercise, index }: { exercise: SuggestedExercise; index:
         ))}
       </div>
       {exercise.notes && (
-        <p className="text-xs text-muted italic mt-2 leading-relaxed">{exercise.notes}</p>
+        <p className="text-xs text-muted italic mt-2 leading-relaxed">
+          {exercise.notes}
+        </p>
       )}
     </motion.div>
   );

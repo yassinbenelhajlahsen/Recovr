@@ -1,3 +1,50 @@
+export const AsteriskIcon = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 14 14"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <line
+      x1="7"
+      y1="0"
+      x2="7"
+      y2="14"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <line
+      x1="0"
+      y1="7"
+      x2="14"
+      y2="7"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <line
+      x1="1.93"
+      y1="1.93"
+      x2="12.07"
+      y2="12.07"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <line
+      x1="12.07"
+      y1="1.93"
+      x2="1.93"
+      y2="12.07"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 export const EyeIcon = () => (
   <svg
     className="w-4 h-4"
