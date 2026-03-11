@@ -41,6 +41,8 @@ model Workout {
   notes            String?
   duration_minutes Int?
   body_weight      Float?
+  is_draft         Boolean @default(false)
+  source           String  @default("manual")
 
   user              User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
   workout_exercises WorkoutExercise[]
