@@ -27,6 +27,7 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 - **`useRef` typing (React 19)**: `useRef<T>(null)` returns `RefObject<T | null>` — prop types that accept refs must use `RefObject<T | null>`, not `RefObject<T>`.
 - **Shared icons in `src/components/ui/icons.tsx`** — never define SVG icons inline.
 - **Colocate hooks** — single-feature hooks go in `hooks/` next to the component. App-wide hooks go in `src/lib/` or `src/hooks/`.
+- **`toLocalISODate(d?)`** in `src/lib/utils.ts` — returns current (or given) date as `YYYY-MM-DD` in local time. Use this everywhere instead of inline date formatting.
 
 ## Auth Patterns
 
@@ -140,10 +141,22 @@ src/
 
 - `SuggestionTrigger` (server-rendered, receives recovery data) opens a `size="lg"` Drawer
 - `SuggestionPanel` + `useSuggestion` hook handle idle/loading/result states; hook uses AbortController to cancel in-flight requests on dismiss
-- Client POSTs `{ selectedPresets: string[] }` — values are multi-select chips from hardcoded `PRESET_GROUPS` (Focus / Duration / Equipment / Style); Equipment options: No equipment, Dumbbells only, Barbell + rack, Cable machine
-- API route `POST /api/suggest` validates `selectedPresets` against a hardcoded `ALLOWED_PRESETS` whitelist — any value not in the set is silently dropped; no freeform string is accepted
-- Recovery data is never trusted from the client — always recomputed server-side via `calculateRecovery(userId)`
-- Calls OpenAI `gpt-4o-mini` with `response_format: json_object`; wrap both the OpenAI call and `JSON.parse` in try/catch
+- API route `POST /api/suggest` calls OpenAI via singleton `src/lib/openai.ts`; do NOT trust client-supplied recovery data — always recompute server-side
+- Wrap OpenAI calls in try/catch and JSON.parse in try/catch — AI can return errors or malformed JSON
+- Result footer has "Dismiss" + "Save as Draft" split buttons; `useSaveDraft` hook in `recovery/hooks/useSaveDraft.ts` POSTs to `/api/workouts/draft`
+
+### Workout Drafts
+
+- `is_draft Boolean @default(false)` and `source String @default("manual")` on Workout model
+- Drafts excluded from recovery engine (`is_draft: false` in `calculateRecovery` where clause)
+- Drafts excluded from progress charts (all 3 Prisma queries in `src/app/progress/page.tsx`)
+- Dashboard includes drafts — "Draft" badge (`text-recovery-yellow`) on workout cards
+- Deep-link: after saving draft from `/recovery` → `router.push('/?draft={id}')` → DashboardClient `openDraftId` prop opens drawer on mount, then `router.replace('/')` clears the param
+- `POST /api/workouts/draft` — exercise matching (exact name → substring → create custom, resolved **sequentially** to avoid duplicate custom exercises) + creates with `is_draft: true, source: "suggested"`
+- `WorkoutForm` also shows "Save as Draft" (ghost button, appears once form has ≥1 exercise) — POSTs to `/api/workouts` with `is_draft: true, source: "manual"`
+- `PATCH /api/workouts/[id]` — only flips `is_draft`; used for publish flow from draft view
+- Draft view in WorkoutViewDetail shows "Save Workout" (accent) + "Edit" + Delete instead of just Edit + Delete
+- `source` field (`"manual"` | `"suggested"`) is internal only, never shown to users
 
 ## Environment Variables
 
