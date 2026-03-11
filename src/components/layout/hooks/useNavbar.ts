@@ -48,8 +48,8 @@ export function useNavbar(): UseNavbarReturn {
   useEffect(() => {
     if (settingsOpen) {
       fetch("/api/user/profile")
-        .then((r) => r.json())
-        .then(setProfile);
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => { if (data) setProfile(data); });
     }
   }, [settingsOpen]);
 
