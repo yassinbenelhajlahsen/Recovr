@@ -227,7 +227,7 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                     onClick={handleGoToWorkout}
                     className="flex-1 text-md font-medium text-accent py-4 hover:bg-surface transition-colors"
                   >
-                    Go to workout →
+                    View workout
                   </button>
                 ) : (
                   <button

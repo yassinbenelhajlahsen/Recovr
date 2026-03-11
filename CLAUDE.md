@@ -158,6 +158,18 @@ src/
 - Draft view in WorkoutViewDetail shows "Save Workout" (accent) + "Edit" + Delete instead of just Edit + Delete
 - `source` field (`"manual"` | `"suggested"`) is internal only, never shown to users
 
+### Redis Caching (Upstash)
+
+- Redis singleton: `src/lib/redis.ts` — uses `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` (Vercel KV). Returns `null` if env vars are absent (graceful local-dev fallback).
+- Cache helpers: `src/lib/cache.ts` — all ops wrapped in try/catch; Redis failure = cache miss, app never crashes.
+- **Cache keys and TTLs**:
+  - `recovery:{userId}` — 300s (5min). Invalidated on workout POST/PUT/DELETE and draft PATCH (publish).
+  - `suggestion:{userId}` — 3600s (1h). Pure TTL expiry, no manual invalidation. Drives the 1-hour cooldown UI.
+  - `exercises:{userId}` — 86400s (24h). Invalidated on exercise POST and draft POST (if custom exercises created).
+- **`getRecovery(userId)`** in `src/lib/recovery.ts` — cache-aside wrapper around `calculateRecovery`. Use this in all API routes; keep `calculateRecovery` pure.
+- **AI suggestion cooldown**: `POST /api/suggest` returns `_cooldown` (seconds remaining) + `_cached: true` on cache hits. `GET /api/suggest/cooldown` returns `{ cooldown }` for the UI to initialize on mount. `useSuggestion` hook manages a countdown timer; `SuggestionPanel` shows "View last suggestion (MM:SS)" when on cooldown.
+- Draft creation (`POST /api/workouts/draft`) does NOT invalidate recovery (drafts excluded from recovery engine).
+
 ## Environment Variables
 
-See `.env.example`. Key vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `DIRECT_URL`, `OPENAI_API_KEY`
+See `.env.example`. Key vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `DIRECT_URL`, `OPENAI_API_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
