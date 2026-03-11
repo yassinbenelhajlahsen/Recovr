@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { toLocalISODate } from "@/lib/utils";
+import { fetchWithAuth } from "@/lib/fetch";
 import type { ExerciseEntry, Exercise, WorkoutFormInitialData, WorkoutFormProps, SessionSummaryData } from "@/types/workout";
 
 interface UseWorkoutFormOptions {
@@ -54,7 +55,7 @@ export function useWorkoutForm({
         .split(",")
         .map((m) => m.trim())
         .filter(Boolean);
-      const res = await fetch("/api/exercises", {
+      const res = await fetchWithAuth("/api/exercises", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -108,7 +109,7 @@ export function useWorkoutForm({
           })),
         })),
       };
-      const res = await fetch(
+      const res = await fetchWithAuth(
         isEdit ? `/api/workouts/${workoutId}` : "/api/workouts",
         {
           method: isEdit ? "PUT" : "POST",
@@ -173,7 +174,7 @@ export function useWorkoutForm({
             })),
         })),
       };
-      const res = await fetch("/api/workouts", {
+      const res = await fetchWithAuth("/api/workouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

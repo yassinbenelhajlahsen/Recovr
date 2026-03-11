@@ -9,6 +9,7 @@ import {
   resolveWeightToLbs,
 } from "@/lib/units";
 import { normalizeGender } from "@/lib/utils";
+import { fetchWithAuth } from "@/lib/fetch";
 
 export function useFitnessForm(
   user: UserProfile | null,
@@ -96,7 +97,7 @@ export function useFitnessForm(
 
   async function handleSaveFitness() {
     setSaving(true);
-    await fetch("/api/user/profile", {
+    const res = await fetchWithAuth("/api/user/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -108,6 +109,7 @@ export function useFitnessForm(
       }),
     });
     setSaving(false);
+    if (!res.ok) return;
     onClose();
     router.refresh();
   }

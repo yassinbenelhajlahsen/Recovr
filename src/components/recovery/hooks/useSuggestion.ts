@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { fetchWithAuth } from "@/lib/fetch";
 import type { WorkoutSuggestion, SuggestedExercise, SuggestionStreamEvent } from "@/types/suggestion";
 
 type SuggestionState = {
@@ -37,7 +38,7 @@ export function useSuggestion() {
 
   // On mount, check cooldown. If active, also load the cached suggestion + draftId directly.
   useEffect(() => {
-    fetch("/api/suggest/cooldown")
+    fetchWithAuth("/api/suggest/cooldown")
       .then((r) => r.json())
       .then((data) => {
         if (typeof data.cooldown === "number" && data.cooldown > 0) {
@@ -141,7 +142,7 @@ export function useSuggestion() {
     setDraftId(null);
 
     try {
-      const res = await fetch("/api/suggest", {
+      const res = await fetchWithAuth("/api/suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ selectedPresets: selectedPresets?.length ? selectedPresets : undefined }),

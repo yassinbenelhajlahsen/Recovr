@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { fetchWithAuth } from "@/lib/fetch";
 import type { UserProfile } from "@/types/user";
 
 export function useProfileSave(
@@ -21,8 +22,8 @@ export function useProfileSave(
     setSaving(true);
     const trimmedName = name.trim() || null;
     const supabase = createClient();
-    await Promise.all([
-      fetch("/api/user/profile", {
+    const [res] = await Promise.all([
+      fetchWithAuth("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -37,6 +38,7 @@ export function useProfileSave(
       }),
     ]);
     setSaving(false);
+    if (!res.ok) return;
     onClose();
     router.refresh();
   }

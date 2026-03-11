@@ -25,15 +25,24 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const { data, error } = await supabase.auth.getClaims();
-
   const pathname = request.nextUrl.pathname;
   const isPublic =
     pathname.startsWith("/auth") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon");
 
-  if ((error || !data) && !isPublic) {
+  // Fast path: local JWT verification (no network roundtrip)
+  const { data: claims, error: claimsError } = await supabase.auth.getClaims();
+  let authenticated = !claimsError && !!claims;
+
+  // Slow path: access token expired — getUser() refreshes via refresh token.
+  // Only run on protected routes to avoid unnecessary network calls on public paths.
+  if (!authenticated && !isPublic) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    authenticated = !userError && !!user;
+  }
+
+  if (!authenticated && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/signin";
     return NextResponse.redirect(url);

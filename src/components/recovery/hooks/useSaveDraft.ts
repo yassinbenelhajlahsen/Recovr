@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toLocalISODate } from "@/lib/utils";
+import { fetchWithAuth } from "@/lib/fetch";
 import type { WorkoutSuggestion } from "@/types/suggestion";
 
 export function useSaveDraft() {
@@ -10,7 +11,7 @@ export function useSaveDraft() {
     setSaving(true);
     setSaveError(null);
     try {
-      const res = await fetch("/api/workouts/draft", {
+      const res = await fetchWithAuth("/api/workouts/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ suggestion, date: toLocalISODate() }),
