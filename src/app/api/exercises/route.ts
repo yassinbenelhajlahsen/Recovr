@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedExercises, setCachedExercises, invalidateExercises } from "@/lib/cache";
 import type { Exercise as ExerciseRow } from "@/types/workout";
 
 export async function GET(request: Request) {
@@ -11,6 +12,12 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q") ?? "";
+
+  // Serve full list from cache when no search query
+  if (!q) {
+    const cached = await getCachedExercises(userId);
+    if (cached) return NextResponse.json(cached);
+  }
 
   let exercises: ExerciseRow[];
 
@@ -35,6 +42,10 @@ export async function GET(request: Request) {
       where: { OR: [{ user_id: null }, { user_id: userId }] },
       orderBy: [{ user_id: "asc" }, { name: "asc" }],
     });
+  }
+
+  if (!q) {
+    void setCachedExercises(userId, exercises);
   }
 
   return NextResponse.json(exercises);
@@ -67,5 +78,6 @@ export async function POST(request: Request) {
     },
   });
 
+  await invalidateExercises(user.id);
   return NextResponse.json(exercise, { status: 201 });
 }

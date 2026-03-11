@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { invalidateRecovery, invalidateSuggestionDraftId } from "@/lib/cache";
 
 const WORKOUT_INCLUDE = {
   workout_exercises: {
@@ -90,6 +91,8 @@ export async function PUT(
     select: { id: true },
   });
 
+  await invalidateRecovery(user.id);
+
   // Smart sync: update User.weight_lbs only if this is the latest workout with body_weight
   const parsedWeight = typeof body_weight === "number" && body_weight > 0 ? body_weight : null;
   if (parsedWeight) {
@@ -130,6 +133,10 @@ export async function PATCH(
   }
 
   await prisma.workout.update({ where: { id }, data: { is_draft: body.is_draft } });
+  // Publishing a draft (is_draft → false) brings it into the recovery window
+  if (body.is_draft === false) {
+    await invalidateRecovery(user.id);
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -149,5 +156,9 @@ export async function DELETE(
   }
 
   await prisma.workout.delete({ where: { id } });
+  await Promise.all([
+    invalidateRecovery(user.id),
+    invalidateSuggestionDraftId(user.id),
+  ]);
   return NextResponse.json({ ok: true });
 }

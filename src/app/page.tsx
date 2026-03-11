@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "@/components/DashboardClient";
-import { calculateRecovery } from "@/lib/recovery";
+import { getRecovery } from "@/lib/recovery";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
@@ -94,7 +94,7 @@ export default async function DashboardPage({
       },
       orderBy: { date: "desc" },
     }),
-    calculateRecovery(userId),
+    getRecovery(userId),
   ]);
 
   if (dbUser && !dbUser.onboarding_completed) {

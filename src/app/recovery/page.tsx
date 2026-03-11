@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { calculateRecovery } from "@/lib/recovery";
+import { getRecovery } from "@/lib/recovery";
 import { RecoveryView } from "@/components/recovery/RecoveryView";
 import { SuggestionTrigger } from "@/components/recovery/SuggestionTrigger";
 
@@ -11,7 +11,7 @@ export default async function RecoveryPage() {
   if (error || !claims) redirect("/auth/signin");
 
   const userId = claims.claims.sub as string;
-  const recovery = await calculateRecovery(userId);
+  const recovery = await getRecovery(userId);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">

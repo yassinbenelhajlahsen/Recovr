@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getCachedRecovery, setCachedRecovery } from "@/lib/cache";
 import type { MuscleRecovery } from "@/types/recovery";
 
 export type { MuscleRecovery };
@@ -36,6 +37,15 @@ function getStatus(pct: number): MuscleRecovery["status"] {
   if (pct >= 0.85) return "recovered";
   if (pct >= 0.45) return "partial";
   return "fatigued";
+}
+
+/** Cache-aside wrapper around calculateRecovery (5-min TTL). */
+export async function getRecovery(userId: string): Promise<MuscleRecovery[]> {
+  const cached = await getCachedRecovery(userId);
+  if (cached) return cached;
+  const result = await calculateRecovery(userId);
+  await setCachedRecovery(userId, result);
+  return result;
 }
 
 export async function calculateRecovery(userId: string): Promise<MuscleRecovery[]> {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { invalidateRecovery } from "@/lib/cache";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -98,6 +99,11 @@ export async function POST(request: Request) {
     },
     select: { id: true },
   });
+
+  // Invalidate recovery cache for non-draft workouts (drafts are excluded from recovery)
+  if (is_draft !== true) {
+    await invalidateRecovery(user.id);
+  }
 
   // Smart sync: update User.weight_lbs only if this is the latest workout with body_weight (skip for drafts)
   if (is_draft !== true && typeof body_weight === "number" && body_weight > 0) {
