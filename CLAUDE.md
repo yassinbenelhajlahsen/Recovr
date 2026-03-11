@@ -43,7 +43,7 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 - Prisma client imported from `@/generated/prisma/client` (NOT `@prisma/client`)
 - `DATABASE_URL` = pooled (port 6543, `?pgbouncer=true`), `DIRECT_URL` = direct (port 5432, migrations)
 - Prisma v7 requires driver adapter: `new PrismaClient({ adapter: new PrismaPg(...) })`
-- Singleton in `src/lib/prisma.ts`
+- Singleton in `src/lib/prisma.ts` — follow the same `globalThis` singleton pattern for any other heavy clients (e.g. `src/lib/openai.ts`)
 - Prefer `select` over `include` — only fetch columns the frontend uses
 
 ### Seeding
@@ -105,7 +105,7 @@ src/
 │   ├── settings/       # SettingsDrawer, AccountTab, FitnessTab + hooks/
 │   └── ui/             # Modal, Drawer, DropdownMenu, FloatingInput, GoalSelector, icons
 ├── store/              # Zustand: workoutStore, appStore, clientStore
-├── lib/                # prisma.ts, recovery.ts, units.ts, utils.ts, supabase/
+├── lib/                # prisma.ts, openai.ts, recovery.ts, units.ts, utils.ts, supabase/
 └── proxy.ts            # Route protection
 ```
 
@@ -135,6 +135,13 @@ src/
 - User fields: `height_inches`, `weight_lbs`, `fitness_goals` (String[]), `onboarding_completed`
 - Goals: up to 3 presets OR 1 custom (mutually exclusive)
 
+### AI Suggestions (`/recovery` page)
+
+- `SuggestionTrigger` (server-rendered, receives recovery data) opens a `size="lg"` Drawer
+- `SuggestionPanel` + `useSuggestion` hook handle idle/loading/result states; hook uses AbortController to cancel in-flight requests on dismiss
+- API route `POST /api/suggest` calls OpenAI via singleton `src/lib/openai.ts`; do NOT trust client-supplied recovery data — always recompute server-side
+- Wrap OpenAI calls in try/catch and JSON.parse in try/catch — AI can return errors or malformed JSON
+
 ## Environment Variables
 
-See `.env.example`. Key vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `DIRECT_URL`
+See `.env.example`. Key vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `DIRECT_URL`, `OPENAI_API_KEY`
