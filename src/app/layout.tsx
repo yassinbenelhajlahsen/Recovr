@@ -23,7 +23,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Recovr",
+  title: "Recvr",
   description: "Smart gym logging with muscle recovery tracking",
 };
 

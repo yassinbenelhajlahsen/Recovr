@@ -1,4 +1,4 @@
-# Recovr — Project Context
+# Recvr — Project Context
 
 ## Stack
 
@@ -90,7 +90,7 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 
 ## Routing
 
-- `/` — public splash/landing page (auth-aware CTAs: "Go to Dashboard" when logged in, "Get Started" + "Log in" when not)
+- `/` — public landing page (auth-aware CTAs: "Go to Dashboard" when logged in, "Get Started" + "Log in" when not)
 - `/dashboard` — home: workout list + recovery panel + drawer (create/view/edit/summary)
 - `/onboarding` — locked 4-step flow (name → gender → metrics → goal). Server-side gate.
 - `/recovery` — SVG body maps + tap-to-inspect muscle detail
