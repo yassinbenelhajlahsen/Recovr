@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import type { MuscleRecovery } from "@/types/recovery";
 
 export type RecoveryMuscleMap = Record<string, { recoveryPct: number } | undefined>;
@@ -30,9 +30,9 @@ export function useRecoverySelection(muscles: MuscleRecovery[]): UseRecoverySele
   const partial = useMemo(() => muscles.filter((r) => r.status === "partial").length, [muscles]);
   const recovered = useMemo(() => muscles.filter((r) => r.status === "recovered").length, [muscles]);
 
-  function handleSelect(name: string) {
+  const handleSelect = useCallback((name: string) => {
     setSelectedMuscle((prev) => (prev === name ? null : name));
-  }
+  }, []);
 
   return { selectedMuscle, selectedData, muscleMap, handleSelect, fatigued, partial, recovered };
 }

@@ -47,27 +47,41 @@ export function getNeutralFill(isDark: boolean): string {
   return isDark ? "hsl(50, 4%, 22%)" : "hsl(50, 8%, 82%)";
 }
 
-// CSS specificity: SVG presentation attributes have specificity 0,
-// so a plain CSS rule overrides them without !important.
-export function buildBodyMapCss(
+/**
+ * Static CSS rules using CSS custom properties — generated once per container,
+ * never changes when recovery data updates. Pair with `buildBodyMapVars()`.
+ */
+export function buildStaticBodyMapCss(
   entries: Array<{ muscle: string; slug: Slug }>,
-  muscles: Record<string, { recoveryPct: number } | undefined>,
-  isDark: boolean,
   containerId: string
 ): string {
   const muscleCss = entries
-    .map(({ muscle, slug }) => {
-      const data = muscles[muscle];
-      const color =
-        data != null
-          ? getRecoveryFill(data.recoveryPct, isDark)
-          : getNeutralFill(isDark);
-      return `#${containerId} #${slug} { fill: ${color}; }`;
-    })
+    .map(({ slug }) =>
+      `#${containerId} #${slug} { fill: var(--fill-${slug}); transition: fill 600ms ease; }`
+    )
     .join("\n");
-  // Make the SVG fill its container (library hardcodes px dimensions)
   const sizeCss = `#${containerId} svg { width: 100% !important; height: auto !important; }`;
   return `${sizeCss}\n${muscleCss}`;
+}
+
+/**
+ * Dynamic CSS custom property values — changes when recovery data or theme updates.
+ * Apply as `style` on the container element so the browser transitions fills smoothly.
+ */
+export function buildBodyMapVars(
+  entries: Array<{ muscle: string; slug: Slug }>,
+  muscles: Record<string, { recoveryPct: number } | undefined>,
+  isDark: boolean,
+): Record<string, string> {
+  const vars: Record<string, string> = {};
+  for (const { muscle, slug } of entries) {
+    const data = muscles[muscle];
+    vars[`--fill-${slug}`] =
+      data != null
+        ? getRecoveryFill(data.recoveryPct, isDark)
+        : getNeutralFill(isDark);
+  }
+  return vars;
 }
 
 export const STATUS_LABELS: Record<RecoveryStatus, string> = {
