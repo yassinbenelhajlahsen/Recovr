@@ -37,6 +37,7 @@ export function WorkoutDetailDrawer() {
       date: data.date,
       duration_minutes: data.duration_minutes,
       notes: data.notes,
+      body_weight: data.body_weight,
       is_draft: workout?.is_draft,
       workout_exercises: data.workout_exercises.map((we, i) => ({
         ...we,
@@ -54,6 +55,7 @@ export function WorkoutDetailDrawer() {
       date: activeSession.date,
       duration_minutes: activeSession.duration_minutes,
       notes: activeSession.notes,
+      body_weight: activeSession.body_weight,
       workout_exercises: activeSession.workout_exercises.map((we, i) => ({
         ...we,
         order: i,
@@ -84,6 +86,7 @@ export function WorkoutDetailDrawer() {
         date: workout.date.split("T")[0],
         notes: workout.notes,
         duration_minutes: workout.duration_minutes,
+        body_weight: workout.body_weight,
         exercises: workout.workout_exercises.map((we) => ({
           exercise_id: we.exercise.id,
           exercise_name: we.exercise.name,

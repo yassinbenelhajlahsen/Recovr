@@ -37,6 +37,9 @@ export function WorkoutSummaryView({ session, onDone, onViewDetails }: Props) {
         <span className="tabular-nums">
           {totalSets} {totalSets === 1 ? "set" : "sets"}
         </span>
+        {session.body_weight && (
+          <span className="tabular-nums">{session.body_weight} lbs</span>
+        )}
       </div>
 
       {session.notes && (
@@ -44,6 +47,8 @@ export function WorkoutSummaryView({ session, onDone, onViewDetails }: Props) {
           {session.notes}
         </p>
       )}
+
+      
 
       {session.workout_exercises.length > 0 && (
         <div className="space-y-3">
