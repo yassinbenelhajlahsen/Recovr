@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import useSWR, { mutate as globalMutate } from "swr";
 import { fetchWithAuth } from "@/lib/fetch";
 import type { WorkoutSuggestion, SuggestedExercise, SuggestionStreamEvent } from "@/types/suggestion";
 
@@ -13,14 +14,30 @@ type SuggestionState = {
 type PartialSuggestion = {
   title?: string;
   rationale?: string;
-  estimatedMinutes?: number;
   exercises: SuggestedExercise[];
+};
+
+// Stores absolute expiry timestamp — no cachedAt drift, works correctly on remount
+type CooldownData = {
+  expiresAt: number; // Date.now() + cooldown * 1000
+  suggestion?: WorkoutSuggestion;
+  draftId?: string;
 };
 
 function formatCooldown(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+async function cooldownFetcher(url: string): Promise<CooldownData> {
+  const res = await fetchWithAuth(url);
+  const data = await res.json();
+  return {
+    expiresAt: Date.now() + (data.cooldown ?? 0) * 1000,
+    suggestion: data.suggestion,
+    draftId: data.draftId,
+  };
 }
 
 export function useSuggestion() {
@@ -31,47 +48,60 @@ export function useSuggestion() {
   });
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [draftId, setDraftId] = useState<string | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isCooldownActive = cooldownSeconds > 0;
+  // Prevents SWR from overwriting state after generate() has already started
+  const initializedRef = useRef(false);
 
-  // On mount, check cooldown. If active, also load the cached suggestion + draftId directly.
+  const { data: cooldownData, isLoading: cooldownLoading } =
+    useSWR<CooldownData>("/api/suggest/cooldown", cooldownFetcher, {
+      dedupingInterval: 60_000,
+    });
+
+  const isInitializing = cooldownLoading && cooldownData === undefined;
+
+  // Initialize from SWR once per mount — expiresAt handles remaining time correctly
   useEffect(() => {
-    fetchWithAuth("/api/suggest/cooldown")
-      .then((r) => r.json())
-      .then((data) => {
-        if (typeof data.cooldown === "number" && data.cooldown > 0) {
-          setCooldownSeconds(data.cooldown);
-        }
-        if (data.suggestion) {
-          setState({ suggestion: data.suggestion as WorkoutSuggestion, isLoading: false, error: null });
-        }
-        if (data.draftId) {
-          setDraftId(data.draftId as string);
-        }
-      })
-      .catch(() => {/* ignore */})
-      .finally(() => setIsInitializing(false));
-  }, []);
+    if (!cooldownData || initializedRef.current) return;
+    initializedRef.current = true;
+    const remaining = Math.max(0, Math.floor((cooldownData.expiresAt - Date.now()) / 1000));
+    if (remaining > 0) {
+      setCooldownSeconds(remaining);
+      if (cooldownData.suggestion) {
+        setState({ suggestion: cooldownData.suggestion, isLoading: false, error: null });
+      }
+      if (cooldownData.draftId) setDraftId(cooldownData.draftId);
+    }
+  }, [cooldownData]);
 
   // Count down the cooldown timer
+  const isCooldownActive = cooldownSeconds > 0;
   useEffect(() => {
     if (!isCooldownActive) return;
-    timerRef.current = setInterval(() => {
+    const interval = setInterval(() => {
       setCooldownSeconds((s) => {
         if (s <= 1) {
-          clearInterval(timerRef.current!);
-          timerRef.current = null;
+          clearInterval(interval);
           return 0;
         }
         return s - 1;
       });
     }, 1000);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => clearInterval(interval);
   }, [isCooldownActive]);
+
+  // When cooldown expires: auto-reset to idle ("Plan your next session")
+  const hadCooldownRef = useRef(false);
+  useEffect(() => {
+    if (cooldownSeconds > 0) {
+      hadCooldownRef.current = true;
+    } else if (hadCooldownRef.current) {
+      hadCooldownRef.current = false;
+      setState({ suggestion: null, isLoading: false, error: null });
+      setDraftId(null);
+      // Clear SWR cache so next mount starts fresh
+      globalMutate("/api/suggest/cooldown", { expiresAt: 0 } as CooldownData, { revalidate: false });
+    }
+  }, [cooldownSeconds]);
 
   async function readStream(res: Response) {
     const reader = res.body!.getReader();
@@ -86,7 +116,7 @@ export function useSuggestion() {
 
         lineBuffer += decoder.decode(value, { stream: true });
         const lines = lineBuffer.split("\n");
-        lineBuffer = lines.pop()!; // Keep incomplete last line
+        lineBuffer = lines.pop()!;
 
         for (const line of lines) {
           if (!line.trim()) continue;
@@ -94,7 +124,7 @@ export function useSuggestion() {
           try {
             event = JSON.parse(line) as SuggestionStreamEvent;
           } catch {
-            continue; // skip malformed line
+            continue;
           }
 
           switch (event.type) {
@@ -111,17 +141,24 @@ export function useSuggestion() {
               partial.rationale = event.value;
               setState({ suggestion: { ...partial } as WorkoutSuggestion, isLoading: true, error: null });
               break;
-            case "estimatedMinutes":
-              partial.estimatedMinutes = event.value;
-              setState({ suggestion: { ...partial } as WorkoutSuggestion, isLoading: true, error: null });
-              break;
             case "exercise":
               partial.exercises = [...partial.exercises, event.value];
               setState({ suggestion: { ...partial } as WorkoutSuggestion, isLoading: true, error: null });
               break;
-            case "done":
-              setState({ suggestion: { ...partial } as WorkoutSuggestion, isLoading: false, error: null });
+            case "done": {
+              const finalSuggestion = { ...partial } as WorkoutSuggestion;
+              setState({ suggestion: finalSuggestion, isLoading: false, error: null });
+              globalMutate(
+                "/api/suggest/cooldown",
+                (prev: CooldownData | undefined) => ({
+                  expiresAt: Date.now() + 3600 * 1000,
+                  suggestion: finalSuggestion,
+                  ...(prev?.draftId ? { draftId: prev.draftId } : {}),
+                }),
+                { revalidate: false },
+              );
               break;
+            }
             case "error":
               setState({ suggestion: null, isLoading: false, error: event.message });
               break;
@@ -140,6 +177,7 @@ export function useSuggestion() {
 
     setState({ suggestion: null, isLoading: true, error: null });
     setDraftId(null);
+    initializedRef.current = true;
 
     try {
       const res = await fetchWithAuth("/api/suggest", {
@@ -163,10 +201,17 @@ export function useSuggestion() {
         const { _cooldown, _cached: _c, _draftId, ...suggestion } = data;
         if (typeof _cooldown === "number" && _cooldown > 0) {
           setCooldownSeconds(_cooldown);
+          globalMutate(
+            "/api/suggest/cooldown",
+            {
+              expiresAt: Date.now() + _cooldown * 1000,
+              suggestion: suggestion as WorkoutSuggestion,
+              ...(_draftId ? { draftId: _draftId as string } : {}),
+            } as CooldownData,
+            { revalidate: false },
+          );
         }
-        if (_draftId) {
-          setDraftId(_draftId as string);
-        }
+        if (_draftId) setDraftId(_draftId as string);
         setState({ suggestion: suggestion as WorkoutSuggestion, isLoading: false, error: null });
         return;
       }
@@ -184,8 +229,29 @@ export function useSuggestion() {
     setState({ suggestion: null, isLoading: false, error: null });
   }
 
+  /** Dev-only: clears local state and force-refetches the cooldown endpoint. */
+  function devReset() {
+    dismiss();
+    setCooldownSeconds(0);
+    setDraftId(null);
+    hadCooldownRef.current = false;
+    initializedRef.current = false;
+    globalMutate("/api/suggest/cooldown");
+  }
+
   const cooldownLabel = cooldownSeconds > 0 ? formatCooldown(cooldownSeconds) : null;
   const isStreaming = state.isLoading && state.suggestion !== null;
 
-  return { ...state, generate, dismiss, cooldownSeconds, cooldownLabel, draftId, setDraftId, isInitializing, isStreaming };
+  return {
+    ...state,
+    generate,
+    dismiss,
+    devReset,
+    cooldownSeconds,
+    cooldownLabel,
+    draftId,
+    setDraftId,
+    isInitializing,
+    isStreaming,
+  };
 }

@@ -33,10 +33,6 @@ const PRESET_GROUPS = [
     options: ["Upper body", "Lower body", "Full body", "Core"],
   },
   {
-    label: "Duration",
-    options: ["30 minutes", "45 minutes", "60 minutes"],
-  },
-  {
     label: "Equipment",
     options: [
       "No equipment",
@@ -51,11 +47,11 @@ const PRESET_GROUPS = [
   },
 ];
 
-// Number of skeleton exercise cards to show while streaming
-const SKELETON_EXERCISE_COUNT = 4;
+// Skeleton count shown before any exercises arrive
+const INITIAL_SKELETON_COUNT = 5;
 
 export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
-  const { suggestion, isLoading, isStreaming, error, generate, dismiss, cooldownLabel, draftId, setDraftId, isInitializing } = useSuggestion();
+  const { suggestion, isLoading, isStreaming, error, generate, devReset, cooldownLabel, draftId, setDraftId, isInitializing } = useSuggestion();
   const { saveDraft, saving, saveError } = useSaveDraft();
   const openDrawer = useWorkoutStore((s) => s.openDrawer);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -63,7 +59,7 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
 
   async function handleDevReset() {
     await fetch("/api/suggest/cooldown", { method: "DELETE" });
-    dismiss();
+    devReset();
   }
 
   function togglePreset(option: string) {
@@ -73,11 +69,6 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
       else next.add(option);
       return next;
     });
-  }
-
-  function handleDismiss() {
-    dismiss();
-    onDismiss?.();
   }
 
   async function handleSaveAsDraft() {
@@ -110,14 +101,15 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
     [recovery],
   );
 
-  // Remaining skeleton cards to show while streaming
+  // While streaming: always keep at least 1 trailing skeleton so the list
+  // never looks "complete" before the done event fires.
   const remainingSkeletons = isStreaming
-    ? Math.max(0, SKELETON_EXERCISE_COUNT - (suggestion?.exercises.length ?? 0))
+    ? Math.max(1, INITIAL_SKELETON_COUNT - (suggestion?.exercises.length ?? 0))
     : 0;
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      <AnimatePresence mode="wait" initial={false}>
+      <AnimatePresence initial={false}>
         {isInitializing ? (
           <motion.div
             key="init"
@@ -163,7 +155,7 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
             {/* Exercise skeletons */}
             <div className="flex flex-col gap-3">
               <div className="skeleton h-3 w-20 rounded" />
-              {[...Array(SKELETON_EXERCISE_COUNT)].map((_, i) => (
+              {[...Array(INITIAL_SKELETON_COUNT)].map((_, i) => (
                 <ExerciseSkeleton key={i} />
               ))}
             </div>
@@ -196,26 +188,9 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                   <div className="skeleton h-7 w-2/3 rounded" />
                 )}
 
-                {/* estimatedMinutes badge — real or skeleton */}
-                <div className="flex flex-col items-end gap-1.5 shrink-0 mt-1">
-                  {suggestion.estimatedMinutes ? (
-                    <motion.span
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.2 }}
-                      className="text-xs bg-surface border border-border-subtle text-muted px-2.5 py-1 rounded-full tabular-nums"
-                    >
-                      ~{suggestion.estimatedMinutes}m
-                    </motion.span>
-                  ) : (
-                    <div className="skeleton h-6 w-14 rounded-full" />
-                  )}
-                  {cooldownLabel && !isStreaming && (
-                    <span className="text-s text-muted/70 tabular-nums">
-                      New in {cooldownLabel}
-                    </span>
-                  )}
-                  {isDev && cooldownLabel && !isStreaming && (
+                {/* Dev reset */}
+                {isDev && cooldownLabel && !isStreaming && (
+                  <div className="shrink-0 mt-1">
                     <button
                       onClick={handleDevReset}
                       className="text-xs text-danger/60 hover:text-danger transition-colors tabular-nums"
@@ -223,8 +198,8 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                     >
                       [reset]
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Rationale — real or skeleton */}
@@ -277,12 +252,6 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                     </p>
                   )}
                   <div className="flex">
-                    <button
-                      onClick={handleDismiss}
-                      className="flex-1 text-md font-medium text-muted py-4 hover:text-secondary hover:bg-surface transition-colors border-r border-border-subtle"
-                    >
-                      Dismiss
-                    </button>
                     {draftId ? (
                       <button
                         onClick={handleGoToWorkout}
@@ -298,6 +267,11 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                       >
                         {saving ? "Saving..." : "Save as Draft"}
                       </button>
+                    )}
+                    {cooldownLabel && (
+                      <span className="shrink-0 flex items-center px-4 text-xs text-muted tabular-nums border-l border-border-subtle">
+                        {cooldownLabel}
+                      </span>
                     )}
                   </div>
                 </motion.div>
@@ -394,15 +368,25 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                   {error}
                 </p>
               )}
-              <button
-                onClick={() =>
-                  generate(selected.size > 0 ? Array.from(selected) : undefined)
-                }
-                className="w-full bg-accent text-white text-sm font-medium rounded-xl px-4 py-3 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              >
-                <SparklesIcon />
-                Plan my next workout
-              </button>
+              {cooldownLabel ? (
+                <button
+                  onClick={() => generate()}
+                  className="w-full bg-accent text-white text-sm font-medium mt-15 rounded-xl px-4 py-3 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <SparklesIcon />
+                  View last suggestion ({cooldownLabel})
+                </button>
+              ) : (
+                <button
+                  onClick={() =>
+                    generate(selected.size > 0 ? Array.from(selected) : undefined)
+                  }
+                  className="w-full bg-accent text-white text-sm font-medium mt-15 rounded-xl px-4 py-3 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <SparklesIcon />
+                  Plan my next workout
+                </button>
+              )}
             </div>
           </motion.div>
         )}
@@ -413,14 +397,17 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
 
 function ExerciseSkeleton() {
   return (
-    <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2.5">
-      <div className="flex justify-between">
-        <div className="skeleton h-4 w-2/5 rounded" />
-        <div className="skeleton h-4 w-1/4 rounded" />
+    <div className="bg-surface border border-border-subtle rounded-xl px-4 py-3.5">
+      {/* Name row + sets summary — mirrors ExerciseCard's flex items-start justify-between mb-2 */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="skeleton h-5 w-2/5 rounded" />
+        <div className="skeleton h-5 w-1/4 rounded shrink-0" />
       </div>
+      {/* Muscle group pills */}
       <div className="flex gap-1.5">
-        <div className="skeleton h-5 w-14 rounded-full" />
-        <div className="skeleton h-5 w-16 rounded-full" />
+        <div className="skeleton h-5.5 w-14 rounded-full" />
+        <div className="skeleton h-5.5 w-16 rounded-full" />
+        <div className="skeleton h-5.5 w-12 rounded-full" />
       </div>
     </div>
   );
@@ -443,10 +430,10 @@ function ExerciseCard({
     if (allSameReps && allSameWeight) {
       const weightLabel =
         first.weight == null ? "bodyweight" : `${first.weight} lbs`;
-      return `${count} × ${first.reps} @ ${weightLabel}`;
+      return `${count} sets of ${first.reps} @ ${weightLabel}`;
     }
     return exercise.sets
-      .map((s) => `${s.reps} @ ${s.weight == null ? "BW" : `${s.weight} lbs`}`)
+      .map((s) => `${s.reps} reps @ ${s.weight == null ? "BW" : `${s.weight} lbs`}`)
       .join(", ");
   })();
 
