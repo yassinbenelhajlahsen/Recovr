@@ -1,17 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import useSWR from "swr";
 import { SparklesIcon, AsteriskIcon } from "@/components/ui/icons";
 import { useSuggestion } from "./hooks/useSuggestion";
 import { useSaveDraft } from "./hooks/useSaveDraft";
+import { useSuggestionHistory } from "./hooks/useSuggestionHistory";
 import { useWorkoutStore } from "@/store/workoutStore";
-import type { SuggestedExercise } from "@/types/suggestion";
+import { fetchWithAuth } from "@/lib/fetch";
+import type { SuggestedExercise, SuggestionDetail, SuggestionHistoryItem } from "@/types/suggestion";
 import type { MuscleRecovery, RecoveryStatus } from "@/types/recovery";
+
+export type PanelView = "planner" | "history" | "historical-detail";
 
 interface SuggestionPanelProps {
   recovery: MuscleRecovery[];
   onDismiss?: () => void;
+  view: PanelView;
+  onViewChange: (v: PanelView) => void;
+  selectedHistoryId: string | null;
+  onSelectHistoryId: (id: string | null) => void;
 }
 
 const STATUS_ORDER: Record<RecoveryStatus, number> = {
@@ -50,15 +59,44 @@ const PRESET_GROUPS = [
 // Skeleton count shown before any exercises arrive
 const INITIAL_SKELETON_COUNT = 5;
 
-export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
-  const { suggestion, isLoading, isStreaming, error, generate, devReset, cooldownLabel, draftId, setDraftId, isInitializing } = useSuggestion();
+export function SuggestionPanel({ recovery, onDismiss, view, onViewChange, selectedHistoryId, onSelectHistoryId }: SuggestionPanelProps) {
+  const {
+    suggestion,
+    isLoading,
+    isStreaming,
+    error,
+    generate,
+    devReset,
+    cooldownLabel,
+    draftId,
+    setDraftId,
+    suggestionId,
+    isHistorical,
+    viewHistorical,
+    isInitializing,
+  } = useSuggestion();
   const { saveDraft, saving, saveError } = useSaveDraft();
   const openDrawer = useWorkoutStore((s) => s.openDrawer);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const isDev = process.env.NODE_ENV === "development";
 
+  // History list
+  const { suggestions: historyItems, hasMore, isEmpty, isLoading: historyLoading, isLoadingMore, loadMore } =
+    useSuggestionHistory();
+
+  // Historical detail — fetched when a history item is selected
+  const { data: historicalDetail, isLoading: detailLoading } = useSWR<SuggestionDetail>(
+    selectedHistoryId ? `/api/suggest/${selectedHistoryId}` : null,
+    async (url: string) => {
+      const res = await fetchWithAuth(url);
+      if (!res.ok) throw new Error("Not found");
+      return res.json();
+    },
+    { revalidateOnFocus: false },
+  );
+
   async function handleDevReset() {
-    await fetch("/api/suggest/cooldown", { method: "DELETE" });
+    await fetchWithAuth("/api/suggest/cooldown", { method: "DELETE" });
     devReset();
   }
 
@@ -73,7 +111,7 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
 
   async function handleSaveAsDraft() {
     if (!suggestion) return;
-    const id = await saveDraft(suggestion);
+    const id = await saveDraft(suggestion, suggestionId);
     if (id) {
       setDraftId(id);
       onDismiss?.();
@@ -81,9 +119,21 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
     }
   }
 
+  async function handleSaveHistoricalAsDraft() {
+    if (!historicalDetail) return;
+    const id = await saveDraft(
+      { title: historicalDetail.title, rationale: historicalDetail.rationale, exercises: historicalDetail.exercises },
+      historicalDetail.id,
+    );
+    if (id) {
+      onDismiss?.();
+      openDrawer(id);
+    }
+  }
+
   async function handleGoToWorkout() {
     if (!draftId) return;
-    const res = await fetch(`/api/workouts/${draftId}`);
+    const res = await fetchWithAuth(`/api/workouts/${draftId}`);
     if (res.status === 404) {
       setDraftId(null);
       return;
@@ -91,6 +141,29 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
     onDismiss?.();
     openDrawer(draftId);
   }
+
+  async function handleGoToHistoricalWorkout(histDraftId: string) {
+    const res = await fetchWithAuth(`/api/workouts/${histDraftId}`);
+    if (res.status === 404) return;
+    onDismiss?.();
+    openDrawer(histDraftId);
+  }
+
+  function openHistoryItem(item: SuggestionHistoryItem) {
+    onSelectHistoryId(item.id);
+    onViewChange("historical-detail");
+    if (historicalDetail && historicalDetail.id === item.id) {
+      viewHistorical(historicalDetail);
+    }
+  }
+
+  // When historicalDetail loads, populate the suggestion state
+  useEffect(() => {
+    if (historicalDetail && view === "historical-detail") {
+      viewHistorical(historicalDetail);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historicalDetail?.id]);
 
   // Sorted: recovered first, then partial, then fatigued
   const sortedMuscles = useMemo(
@@ -107,10 +180,166 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
     ? Math.max(1, INITIAL_SKELETON_COUNT - (suggestion?.exercises.length ?? 0))
     : 0;
 
+
   return (
     <div className="flex-1 flex flex-col h-full">
-      <AnimatePresence initial={false}>
-        {isInitializing ? (
+      <AnimatePresence initial={false} mode="wait">
+
+        {/* ─── HISTORY LIST ─── */}
+        {view === "history" ? (
+          <motion.div
+            key="history"
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="flex-1 flex flex-col overflow-hidden"
+          >
+            <div className="px-6 pt-6 pb-4 border-b border-border-subtle shrink-0">
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-xl text-primary italic">Suggestion History</h2>
+                <button
+                  onClick={() => onViewChange("planner")}
+                  className="text-xs text-accent hover:underline"
+                >
+                  Back to planner
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5">
+              {historyLoading && historyItems.length === 0 ? (
+                <div className="flex flex-col gap-2">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="bg-surface border border-border-subtle rounded-xl px-4 py-3.5">
+                      <div className="skeleton h-5 w-3/5 rounded mb-2" />
+                      <div className="skeleton h-3.5 w-2/5 rounded" />
+                    </div>
+                  ))}
+                </div>
+              ) : isEmpty ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <p className="text-sm text-muted">No suggestions yet.</p>
+                  <button
+                    onClick={() => onViewChange("planner")}
+                    className="mt-3 text-sm text-accent hover:underline"
+                  >
+                    Generate your first one
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {historyItems.map((item, i) => (
+                    <HistoryCard
+                      key={item.id}
+                      item={item}
+                      isLatest={i === 0}
+                      cooldownLabel={i === 0 ? cooldownLabel : null}
+                      onClick={() => openHistoryItem(item)}
+                    />
+                  ))}
+                  {hasMore && (
+                    <button
+                      onClick={loadMore}
+                      disabled={isLoadingMore}
+                      className="text-xs text-accent text-center py-3 hover:underline disabled:opacity-50"
+                    >
+                      {isLoadingMore ? "Loading..." : "Load more"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+        ) : view === "historical-detail" ? (
+          /* ─── HISTORICAL DETAIL ─── */
+          <motion.div
+            key="historical-detail"
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="flex-1 flex flex-col overflow-hidden"
+          >
+            {detailLoading || !historicalDetail ? (
+              <div className="flex-1 p-6 flex flex-col gap-5">
+                <div className="skeleton h-6 w-2/3 rounded" />
+                <div className="skeleton h-4 w-full rounded" />
+                <div className="skeleton h-4 w-4/5 rounded" />
+                <div className="border-t border-border-subtle" />
+                <div className="flex flex-col gap-3">
+                  {[...Array(4)].map((_, i) => <ExerciseSkeleton key={i} />)}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="px-6 pt-6 pb-5 border-b border-border-subtle shrink-0">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <h2 className="font-display text-2xl text-primary italic leading-tight">
+                      {historicalDetail.title}
+                    </h2>
+                    <button
+                      onClick={() => onViewChange("history")}
+                      className="shrink-0 text-xs text-accent hover:underline mt-1"
+                    >
+                      ← History
+                    </button>
+                  </div>
+                  <p className="text-sm text-secondary leading-relaxed">
+                    {historicalDetail.rationale}
+                  </p>
+                  <p className="text-xs text-muted mt-2">
+                    {new Date(historicalDetail.created_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+
+                <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5">
+                  <p className="text-xs uppercase tracking-widest text-muted font-medium mb-3">
+                    Exercises · {historicalDetail.exercises.length}
+                  </p>
+                  <div className="flex flex-col gap-2.5">
+                    {historicalDetail.exercises.map((ex, i) => (
+                      <ExerciseCard key={i} exercise={ex} index={i} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="w-full border-t border-border-subtle bg-elevated shrink-0">
+                  {saveError && (
+                    <p className="text-xs text-danger text-center px-4 pt-3">{saveError}</p>
+                  )}
+                  <div className="flex">
+                    {historicalDetail.draft_id ? (
+                      <button
+                        onClick={() => handleGoToHistoricalWorkout(historicalDetail.draft_id!)}
+                        className="flex-1 text-md font-medium text-accent py-4 hover:bg-surface transition-colors"
+                      >
+                        View workout
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleSaveHistoricalAsDraft}
+                        disabled={saving}
+                        className="flex-1 text-md font-medium text-accent py-4 hover:bg-surface transition-colors disabled:opacity-50"
+                      >
+                        {saving ? "Saving..." : "Save as Draft"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </motion.div>
+
+        ) : isInitializing ? (
+          /* ─── INITIALIZING ─── */
           <motion.div
             key="init"
             initial={{ opacity: 0 }}
@@ -120,7 +349,7 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
             className="flex-1"
           />
         ) : isLoading && !suggestion ? (
-          // Pure skeleton — before any streamed content arrives
+          /* ─── LOADING SKELETON ─── */
           <motion.div
             key="loading"
             initial={{ opacity: 0 }}
@@ -160,9 +389,9 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
               ))}
             </div>
           </motion.div>
+
         ) : suggestion ? (
-          // Result view — used for both streaming (partial) and complete states
-          // Same key="result" prevents exit/enter animation when stream finishes
+          /* ─── RESULT (streaming or complete) ─── */
           <motion.div
             key="result"
             initial={{ opacity: 0 }}
@@ -188,9 +417,9 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                   <div className="skeleton h-7 w-2/3 rounded" />
                 )}
 
-                {/* Dev reset */}
-                {isDev && cooldownLabel && !isStreaming && (
-                  <div className="shrink-0 mt-1">
+                {/* History nav + dev reset */}
+                <div className="shrink-0 mt-1 flex items-center gap-3">
+                  {isDev && cooldownLabel && !isStreaming && !isHistorical && (
                     <button
                       onClick={handleDevReset}
                       className="text-xs text-danger/60 hover:text-danger transition-colors tabular-nums"
@@ -198,8 +427,16 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                     >
                       [reset]
                     </button>
-                  </div>
-                )}
+                  )}
+                  {!isStreaming && isHistorical && (
+                    <button
+                      onClick={() => onViewChange("history")}
+                      className="text-xs text-accent hover:underline"
+                    >
+                      History
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Rationale — real or skeleton */}
@@ -268,7 +505,8 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
                         {saving ? "Saving..." : "Save as Draft"}
                       </button>
                     )}
-                    {cooldownLabel && (
+                    {/* Cooldown timer: only show for latest suggestion, not historical views */}
+                    {!isHistorical && cooldownLabel && (
                       <span className="shrink-0 flex items-center px-4 text-xs text-muted tabular-nums border-l border-border-subtle">
                         {cooldownLabel}
                       </span>
@@ -278,7 +516,9 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
               )}
             </AnimatePresence>
           </motion.div>
+
         ) : (
+          /* ─── IDLE ─── */
           <motion.div
             key="idle"
             initial={{ opacity: 0 }}
@@ -392,6 +632,61 @@ export function SuggestionPanel({ recovery, onDismiss }: SuggestionPanelProps) {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function HistoryCard({
+  item,
+  isLatest,
+  cooldownLabel,
+  onClick,
+}: {
+  item: SuggestionHistoryItem;
+  isLatest: boolean;
+  cooldownLabel: string | null;
+  onClick: () => void;
+}) {
+  const dateLabel = new Date(item.created_at).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left bg-surface border border-border-subtle rounded-xl px-4 py-3.5 hover:bg-elevated transition-colors"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-primary truncate">{item.title}</p>
+          <p className="text-xs text-muted mt-0.5">{dateLabel}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {item.draft_id && (
+            <span className="text-xs text-recovery-yellow bg-recovery-yellow/10 border border-recovery-yellow/20 px-2 py-0.5 rounded-full">
+              Draft
+            </span>
+          )}
+          {isLatest && cooldownLabel && (
+            <span className="text-xs text-muted tabular-nums">{cooldownLabel}</span>
+          )}
+        </div>
+      </div>
+      {item.presets.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {item.presets.map((p) => (
+            <span
+              key={p}
+              className="text-xs bg-elevated text-secondary px-2 py-0.5 rounded-full border border-border-subtle"
+            >
+              {p}
+            </span>
+          ))}
+        </div>
+      )}
+    </button>
   );
 }
 

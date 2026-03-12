@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { fetchWithAuth } from "@/lib/fetch";
-import type { WorkoutSuggestion, SuggestedExercise, SuggestionStreamEvent } from "@/types/suggestion";
+import { PAGE_SIZE } from "./useSuggestionHistory";
+import type { WorkoutSuggestion, SuggestedExercise, SuggestionStreamEvent, SuggestionDetail } from "@/types/suggestion";
 
 type SuggestionState = {
   suggestion: WorkoutSuggestion | null;
@@ -22,6 +23,7 @@ type CooldownData = {
   expiresAt: number; // Date.now() + cooldown * 1000
   suggestion?: WorkoutSuggestion;
   draftId?: string;
+  suggestionId?: string;
 };
 
 function formatCooldown(seconds: number): string {
@@ -37,6 +39,7 @@ async function cooldownFetcher(url: string): Promise<CooldownData> {
     expiresAt: Date.now() + (data.cooldown ?? 0) * 1000,
     suggestion: data.suggestion,
     draftId: data.draftId,
+    suggestionId: data.suggestionId,
   };
 }
 
@@ -48,6 +51,8 @@ export function useSuggestion() {
   });
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [suggestionId, setSuggestionId] = useState<string | null>(null);
+  const [isHistorical, setIsHistorical] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   // Prevents SWR from overwriting state after generate() has already started
   const initializedRef = useRef(false);
@@ -70,6 +75,7 @@ export function useSuggestion() {
         setState({ suggestion: cooldownData.suggestion, isLoading: false, error: null });
       }
       if (cooldownData.draftId) setDraftId(cooldownData.draftId);
+      if (cooldownData.suggestionId) setSuggestionId(cooldownData.suggestionId);
     }
   }, [cooldownData]);
 
@@ -98,6 +104,8 @@ export function useSuggestion() {
       hadCooldownRef.current = false;
       setState({ suggestion: null, isLoading: false, error: null });
       setDraftId(null);
+      setSuggestionId(null);
+      setIsHistorical(false);
       // Clear SWR cache so next mount starts fresh
       globalMutate("/api/suggest/cooldown", { expiresAt: 0 } as CooldownData, { revalidate: false });
     }
@@ -148,15 +156,19 @@ export function useSuggestion() {
             case "done": {
               const finalSuggestion = { ...partial } as WorkoutSuggestion;
               setState({ suggestion: finalSuggestion, isLoading: false, error: null });
+              if (event.suggestionId) setSuggestionId(event.suggestionId);
               globalMutate(
                 "/api/suggest/cooldown",
                 (prev: CooldownData | undefined) => ({
                   expiresAt: Date.now() + 3600 * 1000,
                   suggestion: finalSuggestion,
                   ...(prev?.draftId ? { draftId: prev.draftId } : {}),
+                  ...(event.suggestionId ? { suggestionId: event.suggestionId } : {}),
                 }),
                 { revalidate: false },
               );
+              // Invalidate history first-page key so useSWRInfinite refetches when opened
+              globalMutate(`/api/suggest/history?limit=${PAGE_SIZE}`);
               break;
             }
             case "error":
@@ -177,6 +189,8 @@ export function useSuggestion() {
 
     setState({ suggestion: null, isLoading: true, error: null });
     setDraftId(null);
+    setSuggestionId(null);
+    setIsHistorical(false);
     initializedRef.current = true;
 
     try {
@@ -198,7 +212,7 @@ export function useSuggestion() {
       if (contentType.includes("application/json")) {
         // Cached response — instant JSON path
         const data = await res.json();
-        const { _cooldown, _cached: _c, _draftId, ...suggestion } = data;
+        const { _cooldown, _cached: _c, _draftId, _suggestionId, ...suggestion } = data;
         if (typeof _cooldown === "number" && _cooldown > 0) {
           setCooldownSeconds(_cooldown);
           globalMutate(
@@ -207,11 +221,13 @@ export function useSuggestion() {
               expiresAt: Date.now() + _cooldown * 1000,
               suggestion: suggestion as WorkoutSuggestion,
               ...(_draftId ? { draftId: _draftId as string } : {}),
+              ...(_suggestionId ? { suggestionId: _suggestionId as string } : {}),
             } as CooldownData,
             { revalidate: false },
           );
         }
         if (_draftId) setDraftId(_draftId as string);
+        if (_suggestionId) setSuggestionId(_suggestionId as string);
         setState({ suggestion: suggestion as WorkoutSuggestion, isLoading: false, error: null });
         return;
       }
@@ -224,9 +240,24 @@ export function useSuggestion() {
     }
   }
 
+  /** View a historical suggestion without generating a new one. No cooldown applied. */
+  function viewHistorical(detail: SuggestionDetail) {
+    abortRef.current?.abort();
+    const suggestion: WorkoutSuggestion = {
+      title: detail.title,
+      rationale: detail.rationale,
+      exercises: detail.exercises,
+    };
+    setState({ suggestion, isLoading: false, error: null });
+    setDraftId(detail.draft_id);
+    setSuggestionId(detail.id);
+    setIsHistorical(true);
+  }
+
   function dismiss() {
     abortRef.current?.abort();
     setState({ suggestion: null, isLoading: false, error: null });
+    setIsHistorical(false);
   }
 
   /** Dev-only: clears local state and force-refetches the cooldown endpoint. */
@@ -234,6 +265,7 @@ export function useSuggestion() {
     dismiss();
     setCooldownSeconds(0);
     setDraftId(null);
+    setSuggestionId(null);
     hadCooldownRef.current = false;
     initializedRef.current = false;
     globalMutate("/api/suggest/cooldown");
@@ -251,6 +283,9 @@ export function useSuggestion() {
     cooldownLabel,
     draftId,
     setDraftId,
+    suggestionId,
+    isHistorical,
+    viewHistorical,
     isInitializing,
     isStreaming,
   };

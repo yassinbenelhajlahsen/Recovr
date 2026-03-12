@@ -6,6 +6,7 @@ export interface DrawerProps {
   open: boolean;
   onClose: () => void;
   title?: string;
+  headerRight?: ReactNode;
   size?: "default" | "lg";
   children: ReactNode;
 }

@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { DrawerProps } from "@/types/ui";
 
-export function Drawer({ open, onClose, title, size = "default", children }: DrawerProps) {
+export function Drawer({ open, onClose, title, headerRight, size = "default", children }: DrawerProps) {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -62,14 +62,17 @@ export function Drawer({ open, onClose, title, size = "default", children }: Dra
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
             <h2 className="font-display text-lg text-primary">{title}</h2>
-            <button
-              onClick={onClose}
-              className="text-muted hover:text-primary transition-colors -mr-1 p-1"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-3 -mr-1">
+              {headerRight}
+              <button
+                onClick={onClose}
+                className="text-muted hover:text-primary transition-colors p-1"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         )}
         {/* Scrollable body */}

@@ -7,14 +7,14 @@ export function useSaveDraft() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  async function saveDraft(suggestion: WorkoutSuggestion): Promise<string | null> {
+  async function saveDraft(suggestion: WorkoutSuggestion, suggestionId?: string | null): Promise<string | null> {
     setSaving(true);
     setSaveError(null);
     try {
       const res = await fetchWithAuth("/api/workouts/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ suggestion, date: toLocalISODate() }),
+        body: JSON.stringify({ suggestion, date: toLocalISODate(), ...(suggestionId ? { suggestionId } : {}) }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
