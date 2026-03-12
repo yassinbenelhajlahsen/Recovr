@@ -7,6 +7,7 @@ import type {
   ChartDataPoint,
   DateRangePreset,
   ExerciseSession,
+  MetricMode,
   PerformedExercise,
 } from "@/types/progress";
 
@@ -72,6 +73,7 @@ export function useProgressFilters(
     exercises[0]?.id ?? "",
   );
   const [dateRange, setDateRange] = useState<DateRangePreset>("90d");
+  const [metricMode, setMetricMode] = useState<MetricMode>("1rm");
 
   // When data arrives from SWR (exercises goes from [] → populated), initialize selection
   useEffect(() => {
@@ -121,6 +123,8 @@ export function useProgressFilters(
     setSelectedExerciseId,
     dateRange,
     setDateRange,
+    metricMode,
+    setMetricMode,
     chartData,
     bodyWeightChartData,
     stats,

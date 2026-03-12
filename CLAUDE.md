@@ -48,6 +48,14 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 - Singleton in `src/lib/prisma.ts` — follow the same `globalThis` singleton pattern for any other heavy clients (e.g. `src/lib/openai.ts`)
 - Prefer `select` over `include` — only fetch columns the frontend uses
 
+### Suggestion Model
+
+- `Suggestion` model: `id, user_id, title, rationale, exercises (Json), presets (String[]), draft_id (unique FK → Workout, onDelete: SetNull), created_at`
+- `draft_id` unique constraint enforces 1:1 with Workout. `onDelete: SetNull` — deleting a draft nulls the link but preserves history.
+- `exercises` stored as JSONB (matches `SuggestedExercise[]`). No normalized table — display-only.
+- `src/lib/suggestion.ts` — `persistSuggestion`, `getSuggestionState`, `linkDraftToSuggestion`
+- History API: `GET /api/suggest/history` (cursor pagination, `?cursor=<ISO>&limit=20`), `GET /api/suggest/[id]`
+
 ### Seeding
 
 - `seedExercises()` never deletes exercises (cascade would wipe workout data). Upserts only.
@@ -82,7 +90,8 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 
 ## Routing
 
-- `/` — home: workout list + recovery panel + drawer (create/view/edit/summary)
+- `/` — public splash/landing page (auth-aware CTAs: "Go to Dashboard" when logged in, "Get Started" + "Log in" when not)
+- `/dashboard` — home: workout list + recovery panel + drawer (create/view/edit/summary)
 - `/onboarding` — locked 4-step flow (name → gender → metrics → goal). Server-side gate.
 - `/recovery` — SVG body maps + tap-to-inspect muscle detail
 - `/progress` — 1RM charts + body weight chart, side-by-side. Full-width layout.
@@ -131,6 +140,16 @@ src/
 - API syncs to `User.weight_lbs` only if it's the most recent workout with body_weight
 - Progress chart reads from `Workout.body_weight`, not `User.weight_lbs`
 
+### Progress Charts
+
+- `ProgressChart` accepts either single-line (`dataKey`/`color`) or multi-line (`lines: LineConfig[]`) mode. Export `LineConfig` type from `ProgressChart.tsx`.
+- `MetricMode = "1rm" | "topWeight" | "both"` in `src/types/progress.ts`. State lives in `useProgressFilters` hook.
+- `MetricSelector` is a dropdown (uses `DropdownMenu`/`DropdownMenuItem`) placed inline with `ExerciseSelector`.
+- Legend renders inside the chart card header when `resolvedLines.length > 1`.
+- `isAnimationActive={false}` on all `<Line>` — Recharts animations block tooltip hover until complete; keep disabled.
+- `grow` prop on `ProgressChart`: switches card to `flex flex-col flex-1` and chart area to `flex-1 min-h-[220px]`. Use on the body weight chart (right column) so it stretches to match the left column height in the grid row. Right column must be wrapped in `<div className="flex flex-col">`.
+- Recharts remount fix: `chartKey` prop passed as `key` to `<LineChart>` — include `metricMode` in the key so switching metrics forces a clean remount.
+
 ### Onboarding
 
 - Locked 4-step flow, server-side gate on dashboard + OAuth callback
@@ -148,8 +167,10 @@ src/
 - `useSuggestion` reads the NDJSON stream line-by-line via `ReadableStream`, building a `PartialSuggestion` and calling `setState` on each event. Detects response type via `Content-Type` header to handle both paths.
 - `isStreaming` flag (`state.isLoading && state.suggestion !== null`) drives progressive UI: skeleton cards fill to 4 while exercises arrive, footer hidden until stream completes, scalar fields (title/rationale) animate in individually.
 - Server-side: `extractExercises(buffer, alreadyEmitted)` rescans the full accumulated buffer from the exercises array start on each chunk — avoids incremental-state bugs from chunk-boundary splits.
-- `SuggestionStreamEvent` types in `src/types/suggestion.ts` — import from there, not inline.
-- Result footer has "Dismiss" + "Save as Draft" split buttons; `useSaveDraft` hook in `recovery/hooks/useSaveDraft.ts` POSTs to `/api/workouts/draft`
+- `SuggestionStreamEvent` types in `src/types/suggestion.ts` — import from there, not inline. `done` event now carries optional `suggestionId` (DB row ID).
+- Result footer has "Save as Draft" / "View workout" buttons; `useSaveDraft` hook in `recovery/hooks/useSaveDraft.ts` POSTs to `/api/workouts/draft` with optional `suggestionId`
+- **Suggestion history**: `SuggestionTrigger` has "History" secondary button. `SuggestionPanel` supports views: `planner | history | historical-detail`. Historical detail reuses `ExerciseCard` layout; no cooldown timer shown. `useSuggestionHistory` hook uses `useSWRInfinite` with cursor pagination. Viewing a historical suggestion calls `viewHistorical(detail)` on `useSuggestion` which sets `isHistorical = true`.
+- **Cooldown timer**: shown only for the most recent suggestion (`!isHistorical`) in the result view footer and on the first (latest) card in the history list.
 
 ### Workout Drafts
 
@@ -170,10 +191,13 @@ src/
 - Cache helpers: `src/lib/cache.ts` — all ops wrapped in try/catch; Redis failure = cache miss, app never crashes.
 - **Cache keys and TTLs**:
   - `recovery:{userId}` — 300s (5min). Invalidated on workout POST/PUT/DELETE and draft PATCH (publish).
-  - `suggestion:{userId}` — 3600s (1h). Pure TTL expiry, no manual invalidation. Drives the 1-hour cooldown UI.
+  - `suggestion:{userId}` — 3600s (1h). Fast cache for most recent suggestion. Rehydrated from DB if expired.
+  - `suggestion-id:{userId}` — synced TTL to suggestion key. Stores the DB Suggestion row ID for the cached suggestion.
+  - `suggestion-draft:{userId}` — synced TTL. Stores the draft Workout ID for the current suggestion window.
   - `exercises:{userId}` — 86400s (24h). Invalidated on exercise POST and draft POST (if custom exercises created).
 - **`getRecovery(userId)`** in `src/lib/recovery.ts` — cache-aside wrapper around `calculateRecovery`. Use this in all API routes; keep `calculateRecovery` pure.
-- **AI suggestion cooldown**: `POST /api/suggest` returns `_cooldown` (seconds remaining) + `_cached: true` on cache hits. `GET /api/suggest/cooldown` returns `{ cooldown }` for the UI to initialize on mount. `useSuggestion` hook manages a countdown timer; `SuggestionPanel` shows "View last suggestion (MM:SS)" when on cooldown.
+- **`getSuggestionState(userId)`** in `src/lib/suggestion.ts` — checks Redis first, falls back to DB if Redis is empty. DB is source of truth for cooldown enforcement (`Suggestion.created_at`). Use in all suggest/cooldown routes.
+- **AI suggestion cooldown**: `POST /api/suggest` returns `_cooldown` (seconds remaining) + `_cached: true` on cache hits. `GET /api/suggest/cooldown` returns `{ cooldown, suggestionId? }`. `useSuggestion` manages countdown timer. Cooldown blocked if `timeSinceLast < 1hr` (DB authoritative).
 - Draft creation (`POST /api/workouts/draft`) does NOT invalidate recovery (drafts excluded from recovery engine).
 
 ## Client-Side Data Fetching (SWR)

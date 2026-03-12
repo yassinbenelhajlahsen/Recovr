@@ -1,5 +1,7 @@
 export type DateRangePreset = "30d" | "90d" | "6m" | "1y" | "all";
 
+export type MetricMode = "1rm" | "topWeight" | "both";
+
 export type PerformedExercise = {
   id: string;
   name: string;
