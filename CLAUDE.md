@@ -95,7 +95,7 @@ npx prisma studio        # Open Prisma Studio (DB GUI)
 src/
 ├── types/              # Shared types (workout.ts, recovery.ts, user.ts, progress.ts, theme.ts, ui.ts)
 ├── app/                # Pages + API routes
-│   ├── api/exercises|workouts|recovery|user/   # REST endpoints
+│   ├── api/exercises|workouts|recovery|user|progress/   # REST endpoints
 │   └── recovery|progress|onboarding/           # Sub-pages (Server Components)
 ├── components/
 │   ├── DashboardClient.tsx
@@ -107,7 +107,7 @@ src/
 │   ├── settings/       # SettingsDrawer, AccountTab, FitnessTab + hooks/
 │   └── ui/             # Modal, Drawer, DropdownMenu, FloatingInput, GoalSelector, icons
 ├── store/              # Zustand: workoutStore, appStore, clientStore
-├── lib/                # prisma.ts, openai.ts, recovery.ts, units.ts, utils.ts, supabase/
+├── lib/                # prisma.ts, openai.ts, recovery.ts, units.ts, utils.ts, fetch.ts, hooks.ts, logger.ts, supabase/
 └── proxy.ts            # Route protection
 ```
 
@@ -143,10 +143,10 @@ src/
 - `SuggestionTrigger` (server-rendered, receives recovery data) opens a `size="lg"` Drawer
 - `SuggestionPanel` + `useSuggestion` hook handle idle/loading/streaming/result states; hook uses AbortController to cancel in-flight requests on dismiss
 - API route `POST /api/suggest` calls OpenAI via singleton `src/lib/openai.ts`; do NOT trust client-supplied recovery data — always recompute server-side
-- **Gender prompt bias**: `gender="male"` → upper-body/strength hint; `gender="female"` → lower-body/glute hypertrophy hint; `null` → no gender line added (neutral). Recovery status always takes priority over gender hints.
-- **Streaming**: `POST /api/suggest` uses `stream: true` and returns `text/x-ndjson`. Each line is a `SuggestionStreamEvent` (defined in `src/types/suggestion.ts`): `meta | title | rationale | estimatedMinutes | exercise | done | error`. Cache hits still return instant `application/json` (no streaming).
+- **Gender prompt bias**: `gender="male"` → "Gender: Male" fact added to user prompt; `gender="female"` → "Gender: Female"; `null` → omitted. System prompt's GENDER CONSIDERATION section acts as a tiebreaker: male lowers partial-recovery threshold to 50% for upper-body muscles; female lowers it to 50% for lower-body muscles. Recovery always takes priority — gender never overrides fatigue rules.
+- **Streaming**: `POST /api/suggest` uses `stream: true` and returns `text/x-ndjson`. Each line is a `SuggestionStreamEvent` (defined in `src/types/suggestion.ts`): `meta | title | rationale | exercise | done | error`. Cache hits still return instant `application/json` (no streaming).
 - `useSuggestion` reads the NDJSON stream line-by-line via `ReadableStream`, building a `PartialSuggestion` and calling `setState` on each event. Detects response type via `Content-Type` header to handle both paths.
-- `isStreaming` flag (`state.isLoading && state.suggestion !== null`) drives progressive UI: skeleton cards fill to 4 while exercises arrive, footer hidden until stream completes, scalar fields (title/rationale/minutes) animate in individually.
+- `isStreaming` flag (`state.isLoading && state.suggestion !== null`) drives progressive UI: skeleton cards fill to 4 while exercises arrive, footer hidden until stream completes, scalar fields (title/rationale) animate in individually.
 - Server-side: `extractExercises(buffer, alreadyEmitted)` rescans the full accumulated buffer from the exercises array start on each chunk — avoids incremental-state bugs from chunk-boundary splits.
 - `SuggestionStreamEvent` types in `src/types/suggestion.ts` — import from there, not inline.
 - Result footer has "Dismiss" + "Save as Draft" split buttons; `useSaveDraft` hook in `recovery/hooks/useSaveDraft.ts` POSTs to `/api/workouts/draft`
@@ -175,6 +175,21 @@ src/
 - **`getRecovery(userId)`** in `src/lib/recovery.ts` — cache-aside wrapper around `calculateRecovery`. Use this in all API routes; keep `calculateRecovery` pure.
 - **AI suggestion cooldown**: `POST /api/suggest` returns `_cooldown` (seconds remaining) + `_cached: true` on cache hits. `GET /api/suggest/cooldown` returns `{ cooldown }` for the UI to initialize on mount. `useSuggestion` hook manages a countdown timer; `SuggestionPanel` shows "View last suggestion (MM:SS)" when on cooldown.
 - Draft creation (`POST /api/workouts/draft`) does NOT invalidate recovery (drafts excluded from recovery engine).
+
+## Client-Side Data Fetching (SWR)
+
+- **SWR** installed. Global config in `src/components/layout/Providers.tsx` (wraps ThemeProvider + SWRConfig). `layout.tsx` uses `<Providers>` instead of `<ThemeProvider>`.
+- **Next.js `staleTimes`**: `dynamic: 30, static: 300` in `next.config.ts` — warm navigations skip `loading.tsx` skeletons.
+- **SWR fetcher**: global `swrFetcher` in `Providers.tsx` delegates to `fetchWithAuth` from `src/lib/fetch.ts` — single 401-redirect implementation. Use `fetchWithAuth` directly for non-SWR calls (POST/PUT/PATCH/DELETE). Do NOT reimplement 401 handling elsewhere.
+- **SWR hooks**: `useWorkoutDetail`, `useExerciseSearch`, `useNavbar` profile, `useRecovery`, `useProgress` all use `useSWR`. Do not revert to manual fetch.
+- **Per-hook config**: do not repeat `revalidateOnFocus: false` — set globally. Only override `dedupingInterval` when 5s default is too short.
+- **Mutation invalidation**: call `globalMutate(keyFilter)` from `swr` alongside `router.refresh()`. Key filters: workouts → `k.startsWith("/api/workouts/")`, profile → `"/api/user/profile"`, exercises → `k.startsWith("/api/exercises")`.
+- **Shared hooks**: `useRecovery`, `useProgress`, `useDebouncedValue` in `src/lib/hooks.ts`. `useNavbar` profile typed as `UserProfile` from `@/types/user`.
+
+## Logging
+
+- `src/lib/logger.ts` — pino singleton (`logger`) + `withLogging` HOF. Every exported route handler must be wrapped: `export const GET = withLogging(async function GET(...) { ... })`.
+- Log levels: `logger.error` for 5xx, `logger.warn` for 4xx, `logger.info` for 2xx/3xx. Use `logger.child({ ... })` for request-scoped context.
 
 ## Environment Variables
 
