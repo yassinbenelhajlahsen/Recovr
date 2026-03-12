@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { invalidateExercises, setSuggestionDraftId } from "@/lib/cache";
+import { resolveExercise } from "@/lib/exercise-matcher";
 import { linkDraftToSuggestion } from "@/lib/suggestion";
 import { logger, withLogging } from "@/lib/logger";
 import type { WorkoutSuggestion, SuggestedExercise } from "@/types/suggestion";
@@ -32,9 +33,9 @@ export const POST = withLogging(async function POST(request: Request) {
   const resolvedIds: string[] = [];
   let createdCustomExercise = false;
   for (const ex of suggestion.exercises as SuggestedExercise[]) {
-    const { id, created } = await resolveExercise(ex, allExercises, user.id);
-    resolvedIds.push(id);
-    if (created) createdCustomExercise = true;
+    const result = await resolveExercise(ex.name, ex.muscleGroups, allExercises, user.id);
+    resolvedIds.push(result.id);
+    if (result.created) createdCustomExercise = true;
   }
 
   const now = new Date();
@@ -104,36 +105,3 @@ export const POST = withLogging(async function POST(request: Request) {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 });
-
-async function resolveExercise(
-  ex: SuggestedExercise,
-  allExercises: { id: string; name: string; muscle_groups: string[] }[],
-  userId: string,
-): Promise<{ id: string; created: boolean }> {
-  const suggestedLower = ex.name.toLowerCase();
-
-  // Exact match
-  const exact = allExercises.find((e) => e.name.toLowerCase() === suggestedLower);
-  if (exact) return { id: exact.id, created: false };
-
-  // Substring match (either direction)
-  const fuzzy = allExercises.find(
-    (e) =>
-      e.name.toLowerCase().includes(suggestedLower) ||
-      suggestedLower.includes(e.name.toLowerCase()),
-  );
-  if (fuzzy) return { id: fuzzy.id, created: false };
-
-  // Create a custom exercise for this user and add to allExercises so subsequent
-  // iterations don't create duplicates for the same unknown name.
-  const created = await prisma.exercise.create({
-    data: {
-      name: ex.name,
-      muscle_groups: ex.muscleGroups,
-      user_id: userId,
-    },
-    select: { id: true },
-  });
-  allExercises.push({ id: created.id, name: ex.name, muscle_groups: ex.muscleGroups });
-  return { id: created.id, created: true };
-}

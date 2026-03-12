@@ -1,24 +1,28 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { useExerciseList } from "@/components/workout/hooks/useExerciseList";
 import { useExerciseSearch } from "@/components/workout/hooks/useExerciseSearch";
 import { useWorkoutForm } from "@/components/workout/hooks/useWorkoutForm";
+import { useVoiceRecorder } from "@/components/workout/hooks/useVoiceRecorder";
 import { ExerciseSearchPanel } from "@/components/workout/ExerciseSearchPanel";
 import { ExerciseCard } from "@/components/workout/ExerciseCard";
+import { VoiceInput } from "@/components/workout/VoiceInput";
+import { VoiceResultPanel } from "@/components/workout/VoiceResultPanel";
 
 import { toLocalISODate } from "@/lib/utils";
 import type { Exercise, WorkoutFormProps as Props } from "@/types/workout";
+import type { VoiceTranscribeResponse } from "@/types/voice";
 
 export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCancel, compact }: Props) {
   const isEdit = !!workoutId;
 
   const today = useMemo(() => toLocalISODate(), []);
 
-  const { exercises, addExercise, removeExercise, addSet, removeSet, updateSet } =
+  const { exercises, addExercise, removeExercise, addSet, removeSet, updateSet, bulkAddExercises } =
     useExerciseList(initialData);
 
   const isFormComplete = useMemo(
@@ -70,10 +74,46 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
     clearCache,
   });
 
+  const {
+    voiceState,
+    error: voiceError,
+    elapsed,
+    transcript,
+    result: voiceResult,
+    startRecording,
+    stopRecording,
+    processAudio,
+    reparse,
+    reset: resetVoice,
+  } = useVoiceRecorder();
+
   function handleAddExercise(ex: Exercise) {
     addExercise(ex);
     closeSearch();
   }
+
+  function handleVoiceExercises(result: VoiceTranscribeResponse) {
+    bulkAddExercises(result.exercises);
+    if (result.unmatched.length > 0) clearCache();
+    resetVoice();
+  }
+
+  const handleVoiceToggle = useCallback(async () => {
+    if (voiceState === "idle" || voiceState === "error" || voiceState === "done") {
+      await startRecording();
+    } else if (voiceState === "recording") {
+      const blob = await stopRecording();
+      if (blob.size > 0) {
+        await processAudio(blob);
+      } else {
+        resetVoice();
+      }
+    }
+  }, [voiceState, startRecording, stopRecording, processAudio, resetVoice]);
+
+  const handleReparse = useCallback(async (text: string) => {
+    await reparse(text);
+  }, [reparse]);
 
   const actionButtons = (
     <div className="sticky bottom-0 -mx-5 px-5 pt-4 pb-5 bg-elevated border-t border-border">
@@ -191,15 +231,35 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold text-muted uppercase tracking-wider">Exercises</p>
-          {!showSearch && (
-            <button
-              onClick={openSearch}
-              className="flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline"
-            >
-              <span className="text-base leading-none">+</span> Add Exercise
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            <VoiceInput
+              voiceState={voiceState}
+              elapsed={elapsed}
+              error={voiceError}
+              disabled={saving || savingDraft}
+              onToggle={handleVoiceToggle}
+              onReset={resetVoice}
+            />
+            {!showSearch && (
+              <button
+                onClick={openSearch}
+                className="flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline"
+              >
+                <span className="text-base leading-none">+</span> Add Exercise
+              </button>
+            )}
+          </div>
         </div>
+
+        {voiceState === "done" && voiceResult && transcript && (
+          <VoiceResultPanel
+            transcript={transcript}
+            result={voiceResult}
+            onAdd={handleVoiceExercises}
+            onReparse={handleReparse}
+            onDiscard={resetVoice}
+          />
+        )}
 
         <AnimatePresence mode="popLayout">
           {showSearch ? (
@@ -226,7 +286,7 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
                 customLoading={customLoading}
               />
             </motion.div>
-          ) : exercises.length === 0 ? (
+          ) : exercises.length === 0 && voiceState !== "done" ? (
             <motion.div
               key="empty-state"
               initial={{ opacity: 0 }}
@@ -236,7 +296,7 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
               className="rounded-xl bg-surface border border-border-subtle border-dashed p-12 text-center"
             >
               <p className="font-display text-xl text-muted">No exercises added yet</p>
-              <p className="text-sm text-muted mt-1">Tap &ldquo;Add Exercise&rdquo; to get started</p>
+              <p className="text-sm text-muted mt-1">Tap &ldquo;Add Exercise&rdquo; or use the mic to get started</p>
             </motion.div>
           ) : null}
         </AnimatePresence>
