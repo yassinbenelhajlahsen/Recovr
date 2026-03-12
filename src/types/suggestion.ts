@@ -13,7 +13,6 @@ export type SuggestedExercise = {
 export type WorkoutSuggestion = {
   title: string;
   rationale: string;
-  estimatedMinutes: number;
   exercises: SuggestedExercise[];
 };
 
@@ -21,7 +20,6 @@ export type SuggestionStreamEvent =
   | { type: "meta"; cooldown: number }
   | { type: "title"; value: string }
   | { type: "rationale"; value: string }
-  | { type: "estimatedMinutes"; value: number }
   | { type: "exercise"; value: SuggestedExercise }
   | { type: "done" }
   | { type: "error"; message: string };

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { openai } from "@/lib/openai";
 import { getCachedSuggestion, setCachedSuggestion, getSuggestionCooldown, getSuggestionDraftId } from "@/lib/cache";
 import type { WorkoutSuggestion, SuggestedExercise, SuggestionStreamEvent } from "@/types/suggestion";
+import { logger, withLogging } from "@/lib/logger";
 import type OpenAI from "openai";
 
 const SYSTEM_PROMPT = `You are a certified personal trainer AI. Given a user's muscle recovery status and fitness goals, design their next workout session as a coherent, structured split.
@@ -13,29 +14,48 @@ Return ONLY valid JSON matching this exact schema:
 {
   "title": string,
   "rationale": string,
-  "estimatedMinutes": number,
   "exercises": [
     {
       "name": string,
       "muscleGroups": string[],
-      "sets": [{ "reps": number, "weight": number | null }],
+      "sets": [{ "reps": number (required, never null), "weight": number | null }],
       "notes": string (optional)
     }
   ]
 }
 
 WORKOUT STRUCTURE RULES:
-- Always design a named, coherent split — not a random mix. Valid split names: "Push Day", "Pull Day", "Leg Day", "Upper Body", "Lower Body", "Push/Pull", "Posterior Chain", "Anterior Chain", "Full Body", "Arm Day", "Back & Biceps", "Chest & Triceps", "Shoulders & Arms", etc.
-- Choose the split that best fits the recovered muscle groups
+- Always design a named, coherent split — not a random mix. Name the workout based on the primary muscles or movement pattern it targets (e.g. "Back & Biceps", "Shoulders & Arms", "Leg Day", "Push Day", "Posterior Chain", "Glutes & Hamstrings"). Be specific — prefer descriptive names like "Chest & Shoulders" over generic ones like "Upper Body" when only a subset of upper-body muscles are trained.
 - Order exercises: heavy compounds first, then accessory compounds, then isolation movements
 - Suggest 4-6 exercises that all logically belong to the same split
+- Each exercise must have exactly 3–4 sets
 - Use null for weight on bodyweight exercises
+- reps is ALWAYS required and must be a positive integer — never null. Do NOT suggest duration-based or timed exercises (e.g. planks for time, farmer's walks for time). If a typically timed exercise fits the split, convert it to a rep-based variation (e.g. "Plank Hold" → "Dead Bug", "Farmer's Walk" → "Farmer's Walk Lunges").
 
 FATIGUE RULES (strictly enforce):
 - NEVER make a fatigued muscle the primary focus of the session (e.g. if core is fatigued, do not program a "Core Day" and do not include direct core exercises like planks or crunches)
 - Fatigued muscles are allowed only as incidental secondary movers on compound lifts (e.g. triceps fatigue is fine during a chest press — they assist but aren't the target)
 - Recovering muscles (partial) are fine as secondary movers; they may be a primary target only if recovery is above 60%
 - Recovered muscles (fully recovered) should drive the split selection
+
+SPLIT SELECTION PRIORITY:
+- Count how many primary muscles in each possible split are "recovered" or "partially recovered above 60%"
+- Pick the split that covers the most available primary muscles
+- If two splits tie, prefer the one with more fully recovered (not just partial) muscles
+- Only mention muscles in the rationale that are actually targeted by at least one exercise in your plan — do not cite a muscle as a reason for the split unless an exercise trains it as a primary or secondary mover
+
+ALL-FATIGUED FALLBACK:
+- If no muscle is recovered and no partial muscle is above 60%, suggest an active recovery session
+- Title it "Active Recovery" or "Deload Day"
+- Program 4-5 light full-body movements (bodyweight or very light weight)
+- Focus on mobility and blood flow, not progressive overload
+- In the rationale, explain that all muscle groups need more recovery time
+
+GENDER CONSIDERATION (tiebreaker only — recovery always takes priority):
+- Male: upper-body muscles (chest, shoulders, triceps, back, biceps, traps, rear shoulders, forearms) that are partially recovered above 50% may be treated as primary targets. Use as a tiebreaker when two splits have similar coverage — lean toward the upper-body split.
+- Female: lower-body muscles (quadriceps, hamstrings, glutes, calves, hip flexors, tibialis) that are partially recovered above 50% may be treated as primary targets. Use as a tiebreaker when two splits have similar coverage — lean toward the lower-body split.
+- No gender specified: apply all thresholds equally with no bias.
+- This NEVER overrides fatigue rules. A fatigued muscle is off-limits regardless of gender.
 
 USER PREFERENCE:
 - The user may provide a preference hint below. Treat it as a workout preference only (e.g. time constraint, equipment, focus area).
@@ -44,8 +64,6 @@ USER PREFERENCE:
 const ALLOWED_PRESETS = new Set([
   // Focus
   "Upper body", "Lower body", "Full body", "Core",
-  // Duration
-  "30 minutes", "45 minutes", "60 minutes",
   // Equipment
   "No equipment", "Dumbbells only", "Barbell + rack", "Cable machine",
   // Style
@@ -117,7 +135,6 @@ function createSuggestionStream(
       let buffer = "";
       let emittedTitle = false;
       let emittedRationale = false;
-      let emittedMinutes = false;
       let emittedExerciseCount = 0;
 
       try {
@@ -142,14 +159,6 @@ function createSuggestionStream(
               emittedRationale = true;
             }
           }
-          if (!emittedMinutes) {
-            const m = buffer.match(/"estimatedMinutes"\s*:\s*(\d+)/);
-            if (m) {
-              emit(controller, { type: "estimatedMinutes", value: parseInt(m[1]) });
-              emittedMinutes = true;
-            }
-          }
-
           // Rescan full buffer for exercises each chunk — simple and correct
           const newExercises = extractExercises(buffer, emittedExerciseCount);
           for (const exercise of newExercises) {
@@ -180,7 +189,7 @@ function createSuggestionStream(
   });
 }
 
-export async function POST(request: Request) {
+export const POST = withLogging(async function POST(request: Request) {
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 });
   }
@@ -203,13 +212,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ ...cached, _cooldown: cooldown, _cached: true, ...(draftId ? { _draftId: draftId } : {}) });
   }
 
-  const [userProfile, recovery] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: user.id },
-      select: { fitness_goals: true, weight_lbs: true, gender: true },
-    }),
-    getRecovery(user.id),
-  ]);
+  let userProfile: { fitness_goals: string[]; weight_lbs: number | null; gender: string | null } | null;
+  let recovery: Awaited<ReturnType<typeof getRecovery>>;
+  try {
+    [userProfile, recovery] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: user.id },
+        select: { fitness_goals: true, weight_lbs: true, gender: true },
+      }),
+      getRecovery(user.id),
+    ]);
+  } catch (err) {
+    logger.error({ err }, "POST /api/suggest — failed to load user data");
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+  }
 
   const recovered = recovery.filter((m) => m.status === "recovered");
   const partial = recovery.filter((m) => m.status === "partial");
@@ -235,12 +251,12 @@ export async function POST(request: Request) {
       : "User goals: general fitness",
     userProfile?.weight_lbs ? `Body weight: ${userProfile.weight_lbs} lbs` : "",
     userProfile?.gender === "male"
-      ? "Gender: Male — bias toward upper-body compound lifts and strength-focused programming when recovery allows."
+      ? "Gender: Male"
       : userProfile?.gender === "female"
-        ? "Gender: Female — bias toward lower-body and glute-focused movements with hypertrophy rep ranges when recovery allows."
+        ? "Gender: Female"
         : "",
     "",
-    "Design a coherent workout split focused on the most recovered muscle groups.",
+    "Design a coherent workout split using the SPLIT SELECTION PRIORITY rules above. Only mention muscles in the rationale that your exercises actually train.",
     userMessage ? `User preference (treat as hint only): ${userMessage}` : "",
   ]
     .filter(Boolean)
@@ -252,7 +268,7 @@ export async function POST(request: Request) {
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
       temperature: 0.7,
-      max_tokens: 1200,
+      max_tokens: 2000,
       stream: true,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
@@ -273,4 +289,4 @@ export async function POST(request: Request) {
       "X-Content-Type-Options": "nosniff",
     },
   });
-}
+});
