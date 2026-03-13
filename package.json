@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "verify": "npm run lint && npm run test:run && next build",
-    "build": "prisma generate && npm verify",
+    "build": "prisma generate && npm run verify",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
