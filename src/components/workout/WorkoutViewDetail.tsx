@@ -89,9 +89,27 @@ export function WorkoutViewDetail({
               >
                 <div className="px-5 py-3.5 border-b border-border">
                   <p className="font-semibold text-sm text-primary">{name}</p>
+                  <div className="flex gap-1.5 mt-1.5">
+                    <div className="skeleton h-4 w-16 rounded-md" />
+                    <div className="skeleton h-4 w-12 rounded-md" />
+                  </div>
                 </div>
-                <div className="px-5 py-3.5 animate-pulse">
-                  <div className="h-3 bg-bg rounded w-24" />
+                <div className="px-5 py-3.5">
+                  <div className="grid grid-cols-[40px_1fr_1fr] gap-4 mb-2">
+                    <div className="skeleton h-2.5 w-6 rounded" />
+                    <div className="skeleton h-2.5 w-8 rounded" />
+                    <div className="skeleton h-2.5 w-10 rounded" />
+                  </div>
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="grid grid-cols-[40px_1fr_1fr] gap-4 py-1.5 border-b border-border-subtle last:border-0"
+                    >
+                      <div className="skeleton h-3.5 w-4 rounded" />
+                      <div className="skeleton h-3.5 w-8 rounded" />
+                      <div className="skeleton h-3.5 w-14 rounded" />
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
@@ -101,10 +119,39 @@ export function WorkoutViewDetail({
 
       {/* Loading skeleton fallback */}
       {loading && !previewData && (
-        <div className="space-y-3 animate-pulse">
-          <div className="h-4 bg-surface rounded-lg w-1/3" />
-          <div className="h-24 bg-surface rounded-xl" />
-          <div className="h-24 bg-surface rounded-xl" />
+        <div className="space-y-3">
+          <div className="skeleton h-4 w-1/3 rounded-lg" />
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="rounded-xl bg-surface border border-border-subtle overflow-hidden"
+            >
+              <div className="px-5 py-3.5 border-b border-border space-y-1.5">
+                <div className="skeleton h-4 w-32 rounded" />
+                <div className="flex gap-1.5">
+                  <div className="skeleton h-4 w-16 rounded-md" />
+                  <div className="skeleton h-4 w-12 rounded-md" />
+                </div>
+              </div>
+              <div className="px-5 py-3.5">
+                <div className="grid grid-cols-[40px_1fr_1fr] gap-4 mb-2">
+                  <div className="skeleton h-2.5 w-6 rounded" />
+                  <div className="skeleton h-2.5 w-8 rounded" />
+                  <div className="skeleton h-2.5 w-10 rounded" />
+                </div>
+                {[1, 2, 3].map((j) => (
+                  <div
+                    key={j}
+                    className="grid grid-cols-[40px_1fr_1fr] gap-4 py-1.5 border-b border-border-subtle last:border-0"
+                  >
+                    <div className="skeleton h-3.5 w-4 rounded" />
+                    <div className="skeleton h-3.5 w-8 rounded" />
+                    <div className="skeleton h-3.5 w-14 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
