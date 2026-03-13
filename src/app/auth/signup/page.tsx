@@ -208,6 +208,18 @@ export default function SignUpPage() {
           </div>
         </form>
 
+        <p className="text-center text-xs text-muted">
+          By signing up, you agree to our{" "}
+          <Link href="/terms-of-service" className="text-accent hover:text-accent-hover underline transition-colors duration-150">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="text-accent hover:text-accent-hover underline transition-colors duration-150">
+            Privacy Policy
+          </Link>
+          .
+        </p>
+
         <div className="flex items-center justify-center gap-1 text-sm">
           <span className="text-muted">Already have an account?</span>
           <Link href="/auth/signin" className="text-accent hover:text-accent-hover transition-colors duration-150">

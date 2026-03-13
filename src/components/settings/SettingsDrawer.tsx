@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import { Drawer } from "@/components/ui/Drawer";
 import { AccountTab } from "./AccountTab";
@@ -69,6 +70,17 @@ export function SettingsDrawer({ open, onClose, user }: SettingsDrawerProps) {
           )}
         </motion.div>
       </AnimatePresence>
+
+      {/* Legal links */}
+      <div className="px-6 pb-6 pt-2 text-center text-xs text-muted">
+        <Link href="/privacy" onClick={onClose} className="hover:text-secondary transition-colors duration-150">
+          Privacy Policy
+        </Link>
+        <span className="mx-2">&middot;</span>
+        <Link href="/terms-of-service" onClick={onClose} className="hover:text-secondary transition-colors duration-150">
+          Terms of Service
+        </Link>
+      </div>
     </Drawer>
   );
 }

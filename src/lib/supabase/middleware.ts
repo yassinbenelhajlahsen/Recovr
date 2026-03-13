@@ -29,6 +29,8 @@ export async function updateSession(request: NextRequest) {
   const isPublic =
     pathname === "/" ||
     pathname.startsWith("/auth") ||
+    pathname.startsWith("/privacy") ||
+    pathname.startsWith("/terms-of-service") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon");
 

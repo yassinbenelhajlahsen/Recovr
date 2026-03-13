@@ -3,7 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Fraunces } from "next/font/google";
 import { Providers } from "@/components/layout/Providers";
 import { Navbar } from "@/components/layout/Navbar";
+import { MobileGate } from "@/components/layout/MobileGate";
 import { PageTransition } from "@/components/layout/PageTransition";
+import { Footer } from "@/components/layout/Footer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -46,10 +48,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} antialiased font-sans bg-bg text-primary`}
       >
         <Providers>
+          <MobileGate />
           <Navbar />
           <main>
             <PageTransition>{children}</PageTransition>
           </main>
+          <Footer />
         </Providers>
       </body>
     </html>
