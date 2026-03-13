@@ -110,6 +110,18 @@ export const POST = withLogging(async function POST(request: Request) {
   }
 
   try {
+    // Verify all submitted exercise IDs belong to this user or are global exercises.
+    const exerciseIds = exercises.map((ex: { exercise_id: string }) => ex.exercise_id);
+    if (exerciseIds.length > 0) {
+      const validExercises = await prisma.exercise.findMany({
+        where: { id: { in: exerciseIds }, OR: [{ user_id: null }, { user_id: user.id }] },
+        select: { id: true },
+      });
+      if (validExercises.length !== exerciseIds.length) {
+        return NextResponse.json({ error: "One or more exercise IDs are invalid" }, { status: 400 });
+      }
+    }
+
     const workout = await prisma.workout.create({
       data: {
         user_id: user.id,

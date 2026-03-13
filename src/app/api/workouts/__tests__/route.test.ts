@@ -36,6 +36,8 @@ beforeEach(() => {
   (prisma.workout.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "new-workout-1" });
   (prisma.workout.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null);
   (prisma.user.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
+  // exercise.findMany is called by the new exercise ownership validation in POST
+  (prisma.exercise.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: "ex-1" }]);
 });
 
 describe("GET /api/workouts", () => {

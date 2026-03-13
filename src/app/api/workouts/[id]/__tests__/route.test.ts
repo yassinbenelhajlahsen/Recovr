@@ -160,6 +160,8 @@ describe("PUT /api/workouts/[id]", () => {
     (prisma.workout.update as ReturnType<typeof vi.fn>).mockResolvedValue({ id: WORKOUT_ID });
     (prisma.workoutExercise.deleteMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 });
     (prisma.workout.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    // exercise.findMany is called by the new exercise ownership validation in PUT
+    (prisma.exercise.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: "ex-1" }]);
   });
 
   it("returns 401 when unauthenticated", async () => {

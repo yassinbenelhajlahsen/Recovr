@@ -96,6 +96,20 @@ export const PUT = withLogging(async function PUT(
       return NextResponse.json({ error: "duration_minutes must be a valid number" }, { status: 400 });
     }
 
+    // Verify all submitted exercise IDs belong to this user or are global exercises.
+    if (Array.isArray(exercises)) {
+      const exerciseIds = exercises.map((ex: { exercise_id: string }) => ex.exercise_id);
+      if (exerciseIds.length > 0) {
+        const validExercises = await prisma.exercise.findMany({
+          where: { id: { in: exerciseIds }, OR: [{ user_id: null }, { user_id: user.id }] },
+          select: { id: true },
+        });
+        if (validExercises.length !== exerciseIds.length) {
+          return NextResponse.json({ error: "One or more exercise IDs are invalid" }, { status: 400 });
+        }
+      }
+    }
+
     // Delete existing workout_exercises (sets cascade)
     await prisma.workoutExercise.deleteMany({ where: { workout_id: id } });
 
