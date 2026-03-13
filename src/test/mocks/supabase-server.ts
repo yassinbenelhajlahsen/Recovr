@@ -12,6 +12,16 @@ export const mockSupabase = {
       data: { user: { id: TEST_USER_ID } },
       error: null,
     }),
+    exchangeCodeForSession: vi.fn().mockResolvedValue({
+      data: {
+        user: {
+          id: TEST_USER_ID,
+          email: "test@example.com",
+          user_metadata: { full_name: "Test User" },
+        },
+      },
+      error: null,
+    }),
   },
 };
 

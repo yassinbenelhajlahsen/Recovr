@@ -23,3 +23,11 @@ export function mockStreamResponse(chunks: string[]) {
     },
   });
 }
+
+export function mockAsyncIterable(chunks: string[]) {
+  return (async function* () {
+    for (const content of chunks) {
+      yield { choices: [{ delta: { content } }] };
+    }
+  })();
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GET, PATCH, DELETE } from "@/app/api/workouts/[id]/route";
+import { GET, PATCH, DELETE, PUT } from "@/app/api/workouts/[id]/route";
 import { mockUnauthorized, mockAuthorized, TEST_USER_ID } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 
@@ -138,5 +138,132 @@ describe("DELETE /api/workouts/[id]", () => {
     });
     expect(res.status).toBe(401);
     expect(prisma.workout.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe("PUT /api/workouts/[id]", () => {
+  const VALID_BODY = {
+    date: "2024-01-15",
+    notes: "Good session",
+    duration_minutes: 60,
+    body_weight: null,
+    exercises: [
+      {
+        exercise_id: "ex-1",
+        order: 0,
+        sets: [{ set_number: 1, reps: "10", weight: "135" }],
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    (prisma.workout.update as ReturnType<typeof vi.fn>).mockResolvedValue({ id: WORKOUT_ID });
+    (prisma.workoutExercise.deleteMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 });
+    (prisma.workout.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    mockUnauthorized();
+    const res = await PUT(makeRequest("PUT", VALID_BODY), {
+      params: Promise.resolve({ id: WORKOUT_ID }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 when workout not found", async () => {
+    (prisma.workout.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    const res = await PUT(makeRequest("PUT", VALID_BODY), {
+      params: Promise.resolve({ id: WORKOUT_ID }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when workout belongs to another user", async () => {
+    (prisma.workout.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...MOCK_WORKOUT,
+      user_id: OTHER_USER_ID,
+    });
+    const res = await PUT(makeRequest("PUT", VALID_BODY), {
+      params: Promise.resolve({ id: WORKOUT_ID }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 400 for invalid JSON body", async () => {
+    const req = new Request(`http://localhost/api/workouts/${WORKOUT_ID}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: "not-json",
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: WORKOUT_ID }) });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for invalid date format", async () => {
+    const res = await PUT(makeRequest("PUT", { ...VALID_BODY, date: "not-a-date" }), {
+      params: Promise.resolve({ id: WORKOUT_ID }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for future date", async () => {
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 1);
+    const dateStr = futureDate.toISOString().split("T")[0];
+    const res = await PUT(makeRequest("PUT", { ...VALID_BODY, date: dateStr }), {
+      params: Promise.resolve({ id: WORKOUT_ID }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for invalid reps/weight (NaN)", async () => {
+    const res = await PUT(
+      makeRequest("PUT", {
+        ...VALID_BODY,
+        exercises: [{ exercise_id: "ex-1", sets: [{ set_number: 1, reps: "abc", weight: "135" }] }],
+      }),
+      { params: Promise.resolve({ id: WORKOUT_ID }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for invalid duration_minutes", async () => {
+    const res = await PUT(makeRequest("PUT", { ...VALID_BODY, duration_minutes: "not-a-number" }), {
+      params: Promise.resolve({ id: WORKOUT_ID }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 200 and calls deleteMany + update", async () => {
+    const res = await PUT(makeRequest("PUT", VALID_BODY), {
+      params: Promise.resolve({ id: WORKOUT_ID }),
+    });
+    expect(res.status).toBe(200);
+    expect(prisma.workoutExercise.deleteMany).toHaveBeenCalledWith({ where: { workout_id: WORKOUT_ID } });
+    expect(prisma.workout.update).toHaveBeenCalled();
+  });
+
+  it("syncs body_weight to user profile when this is the latest workout", async () => {
+    (prisma.workout.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: WORKOUT_ID,
+      body_weight: 185,
+    });
+    const res = await PUT(makeRequest("PUT", { ...VALID_BODY, body_weight: 185 }), {
+      params: Promise.resolve({ id: WORKOUT_ID }),
+    });
+    expect(res.status).toBe(200);
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { weight_lbs: 185 } }),
+    );
+  });
+
+  it("returns 500 when prisma throws", async () => {
+    (prisma.workoutExercise.deleteMany as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("DB error"),
+    );
+    const res = await PUT(makeRequest("PUT", VALID_BODY), {
+      params: Promise.resolve({ id: WORKOUT_ID }),
+    });
+    expect(res.status).toBe(500);
   });
 });

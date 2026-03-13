@@ -249,12 +249,18 @@ src/
 ## Testing
 
 - **Vitest + RTL** for unit/integration/component tests. **Playwright** for E2E.
-- `npm run test:run` — all Vitest tests (223 as of Tier 1/2 test expansion). `npm run test:e2e` — Playwright smoke + authenticated E2E suites.
-- **Mock aliases** in `vitest.config.ts` (array format, specific before generic): `@/lib/prisma`, `@/lib/supabase/server`, `@/lib/supabase/client`, `@/lib/openai`, `@/lib/redis`, `@/lib/logger` all map to `src/test/mocks/`.
-- **`@/lib/cache` intentionally NOT aliased** — tests hit real cache logic against the null-redis mock.
-- **Auth mock pattern**: `src/test/mocks/supabase-server.ts` exports `mockSupabase`, `createClient`, `TEST_USER_ID`, `mockUnauthorized()`, `mockAuthorized()`. Import these in API route tests.
-- **`vi.clearAllMocks()` in `beforeEach`** (NOT `resetAllMocks`) — clears call history without wiping `mockResolvedValue` implementations.
+- `npm run test:run` — all Vitest tests (259 as of Tier 3 test expansion). `npm run test:e2e` — Playwright smoke + authenticated E2E suites.
+- **Mock aliases** in `vitest.config.ts` (array format, specific before generic): `@/generated/prisma/client`, `@/lib/prisma`, `@/lib/supabase/server`, `@/lib/supabase/client`, `@/lib/openai`, `@/lib/groq`, `@/lib/redis`, `@/lib/logger` all map to `src/test/mocks/`.
+- **`@/lib/cache` intentionally NOT aliased** — tests hit real cache logic against the redis mock.
+- **Redis mock** (`src/test/mocks/redis.ts`) exports a non-null object with `get/set/del/ttl/incr/expire` as `vi.fn()`. Default: `get→null`, `ttl→-2` (key not found), `set/del/incr/expire→OK/1`. Tests override per-test with `mockResolvedValue`.
+- **`vi.mock("@/lib/suggestion")` / `vi.mock("@/lib/recovery")`** for routes that call these — they are NOT aliased, so must be mocked inline via `vi.mock`.
+- **`vi.mock("@supabase/supabase-js")`** for the admin client used in `user/delete` route.
+- **Auth mock pattern**: `src/test/mocks/supabase-server.ts` exports `mockSupabase`, `createClient`, `TEST_USER_ID`, `mockUnauthorized()`, `mockAuthorized()`. Mock also includes `exchangeCodeForSession` for auth callback tests. Import these in API route tests.
+- **`vi.clearAllMocks()` in `beforeEach`** (NOT `resetAllMocks`) — clears call history without wiping `mockResolvedValue` implementations. Re-set default mock values in `beforeEach` after clearing, especially for `redis.ttl` (default -2) and `redis.get` (default null).
 - **`withLogging` mock** is a passthrough (`(fn) => fn`) — route handlers don't need wrapping in tests.
+- **FormData path testing in jsdom**: jsdom's `request.formData()` can't parse real multipart bodies. Use a mock request object with `formData: vi.fn().mockResolvedValue(mockFormData)` where `mockFormData.get` returns the audio blob. Don't use real `FormData.append()` with fake Blobs (jsdom enforces strict instanceof check).
+- **Overriding Blob.size in tests**: jsdom defines `size` as own property on each Blob instance, blocking subclass override. For a fake large blob use `Object.defineProperty(new File([...], ...), "size", { get: () => N, configurable: true })` — `File` allows this. For non-Blob objects, use a plain object (won't pass `instanceof Blob` check).
+- **`vi.mock()` does NOT override `resolve.alias` entries** — aliases win. Use the aliased mock directly (import it, configure with `mockResolvedValue`).
 - **E2E tests** live in `e2e/` and run separately via `playwright test`. Vitest `include: ["src/**/*.test.{ts,tsx}"]` ensures no overlap.
 - **E2E auth**: `e2e/global-setup.ts` signs in once via UI and saves cookies to `e2e/.auth/user.json`. Set `E2E_TEST_EMAIL` + `E2E_TEST_PASSWORD` env vars. Test user must have `onboarding_completed = true` in DB.
 - **Playwright projects**: `chromium` (unauthenticated — smoke + auth spec), `authenticated` (uses stored state — dashboard, workout, recovery, progress specs).

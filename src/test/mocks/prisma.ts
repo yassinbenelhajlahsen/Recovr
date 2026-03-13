@@ -7,6 +7,7 @@ const modelMock = () => ({
   create: vi.fn().mockResolvedValue(null),
   update: vi.fn().mockResolvedValue(null),
   delete: vi.fn().mockResolvedValue(null),
+  deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
   upsert: vi.fn().mockResolvedValue(null),
 });
 

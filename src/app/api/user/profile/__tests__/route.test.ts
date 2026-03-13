@@ -151,4 +151,74 @@ describe("PUT /api/user/profile", () => {
       expect.objectContaining({ where: { id: TEST_USER_ID } }),
     );
   });
+
+  it("stores valid integer height_inches", async () => {
+    await PUT(makePutRequest({ height_inches: 65 }));
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ height_inches: 65 }) }),
+    );
+  });
+
+  it("rejects float height_inches → null", async () => {
+    await PUT(makePutRequest({ height_inches: 65.5 }));
+    const call = (prisma.user.update as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.data.height_inches).toBeNull();
+  });
+
+  it("rejects zero height_inches → null", async () => {
+    await PUT(makePutRequest({ height_inches: 0 }));
+    const call = (prisma.user.update as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.data.height_inches).toBeNull();
+  });
+
+  it("rejects negative height_inches → null", async () => {
+    await PUT(makePutRequest({ height_inches: -5 }));
+    const call = (prisma.user.update as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.data.height_inches).toBeNull();
+  });
+
+  it("rejects string height_inches → null", async () => {
+    await PUT(makePutRequest({ height_inches: "tall" }));
+    const call = (prisma.user.update as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.data.height_inches).toBeNull();
+  });
+
+  it("stores valid integer weight_lbs", async () => {
+    await PUT(makePutRequest({ weight_lbs: 150 }));
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ weight_lbs: 150 }) }),
+    );
+  });
+
+  it("rejects zero or negative weight_lbs → null", async () => {
+    await PUT(makePutRequest({ weight_lbs: 0 }));
+    const call = (prisma.user.update as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.data.weight_lbs).toBeNull();
+  });
+
+  it("sets fitness_goals to [] when passed as non-array", async () => {
+    await PUT(makePutRequest({ fitness_goals: "not-an-array" }));
+    const call = (prisma.user.update as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.data.fitness_goals).toEqual([]);
+  });
+
+  it("filters out empty/whitespace fitness_goals items", async () => {
+    await PUT(makePutRequest({ fitness_goals: ["", "  ", "valid_goal"] }));
+    const call = (prisma.user.update as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.data.fitness_goals).toEqual(["valid_goal"]);
+  });
+
+  it("returns 500 when prisma.user.update throws", async () => {
+    (prisma.user.update as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("DB error"));
+    const res = await PUT(makePutRequest({ name: "Test" }));
+    expect(res.status).toBe(500);
+  });
+});
+
+describe("GET /api/user/profile error paths", () => {
+  it("returns 500 when prisma.user.findUnique throws", async () => {
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("DB error"));
+    const res = await GET(makeGetRequest());
+    expect(res.status).toBe(500);
+  });
 });
