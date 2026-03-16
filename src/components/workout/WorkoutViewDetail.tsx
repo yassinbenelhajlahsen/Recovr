@@ -47,7 +47,7 @@ export function WorkoutViewDetail({
       globalMutate(
         (k) => typeof k === "string" && k.startsWith("/api/workouts/"),
         undefined,
-        { revalidate: false },
+        { revalidate: true },
       );
       globalMutate("/api/recovery");
       globalMutate("/api/progress");
