@@ -130,6 +130,13 @@ body {
   opacity: 0.06;
 }
 
+/* ─── Voice input animations ─── */
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
 /* ─── Scroll indicator bounce ─── */
 
 @keyframes scroll-bounce {

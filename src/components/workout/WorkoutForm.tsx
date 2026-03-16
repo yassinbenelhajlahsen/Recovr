@@ -79,7 +79,6 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
     error: voiceError,
     elapsed,
     audioLevels,
-    liveTranscript,
     transcript,
     result: voiceResult,
     startRecording,
@@ -239,7 +238,6 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
                 voiceState={voiceState}
                 elapsed={elapsed}
                 audioLevels={audioLevels}
-                liveTranscript={liveTranscript}
                 error={voiceError}
                 disabled={saving || savingDraft}
                 onToggle={handleVoiceToggle}
@@ -306,7 +304,6 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
                 voiceState={voiceState}
                 elapsed={elapsed}
                 audioLevels={audioLevels}
-                liveTranscript={liveTranscript}
                 error={voiceError}
                 disabled={saving || savingDraft}
                 onToggle={handleVoiceToggle}

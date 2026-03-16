@@ -8,7 +8,6 @@ type Props = {
   voiceState: VoiceState;
   elapsed: number;
   audioLevels: number[];
-  liveTranscript: string;
   error: string | null;
   disabled?: boolean;
   hero?: boolean;
@@ -16,7 +15,7 @@ type Props = {
   onReset: () => void;
 };
 
-export function VoiceInput({ voiceState, elapsed, audioLevels, liveTranscript, error, disabled, hero = false, onToggle, onReset }: Props) {
+export function VoiceInput({ voiceState, elapsed, audioLevels, error, disabled, hero = false, onToggle, onReset }: Props) {
   if (typeof window !== "undefined" && typeof MediaRecorder === "undefined") {
     return null;
   }
@@ -25,14 +24,14 @@ export function VoiceInput({ voiceState, elapsed, audioLevels, liveTranscript, e
     return <CompactVoiceInput voiceState={voiceState} elapsed={elapsed} error={error} disabled={disabled} onToggle={onToggle} onReset={onReset} />;
   }
 
-  return <HeroVoiceInput voiceState={voiceState} elapsed={elapsed} audioLevels={audioLevels} liveTranscript={liveTranscript} error={error} disabled={disabled} onToggle={onToggle} onReset={onReset} />;
+  return <HeroVoiceInput voiceState={voiceState} elapsed={elapsed} audioLevels={audioLevels} error={error} disabled={disabled} onToggle={onToggle} onReset={onReset} />;
 }
 
 function formatTime(s: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-function HeroVoiceInput({ voiceState, elapsed, audioLevels, liveTranscript, error, disabled, onToggle, onReset }: Omit<Props, "hero">) {
+function HeroVoiceInput({ voiceState, elapsed, audioLevels, error, disabled, onToggle, onReset }: Omit<Props, "hero">) {
   return (
     <div className="flex flex-col items-center py-2">
       <AnimatePresence mode="wait" initial={false}>
@@ -90,10 +89,9 @@ function HeroVoiceInput({ voiceState, elapsed, audioLevels, liveTranscript, erro
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="flex flex-col items-center gap-4 w-full"
           >
-            {/* Waveform row: red dot + bars + timer */}
-            <div className="w-full flex items-center gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-danger animate-pulse shrink-0" />
-              {/* Bar graph */}
+            {/* Waveform row: bars + timer */}
+            <div className="w-full flex items-center gap-2">
+              {/* Bar graph — fills all available space */}
               <div className="flex items-center gap-px h-6 flex-1">
                 {audioLevels.map((level, i) => (
                   <div
@@ -107,17 +105,6 @@ function HeroVoiceInput({ voiceState, elapsed, audioLevels, liveTranscript, erro
               <span className="font-mono text-xs font-medium text-danger tabular-nums shrink-0">
                 {formatTime(elapsed)}
               </span>
-            </div>
-            {/* Live transcript preview */}
-            <div className="w-full min-h-[48px] rounded-lg bg-surface border border-border-subtle px-3 py-2.5">
-              {liveTranscript ? (
-                <p className="text-sm text-muted leading-relaxed">
-                  {liveTranscript}
-                  <span className="inline-block w-0.5 h-3.5 bg-muted/50 ml-0.5 align-middle animate-pulse" />
-                </p>
-              ) : (
-                <p className="text-sm text-muted/50 italic">Listening…</p>
-              )}
             </div>
             {/* Explicit stop button */}
             <button
@@ -189,7 +176,7 @@ function HeroVoiceInput({ voiceState, elapsed, audioLevels, liveTranscript, erro
   );
 }
 
-function CompactVoiceInput({ voiceState, elapsed, error, disabled, onToggle, onReset }: Omit<Props, "hero" | "audioLevels" | "liveTranscript">) {
+function CompactVoiceInput({ voiceState, elapsed, error, disabled, onToggle, onReset }: Omit<Props, "hero" | "audioLevels">) {
   if (voiceState === "idle" || voiceState === "done") {
     return (
       <button
