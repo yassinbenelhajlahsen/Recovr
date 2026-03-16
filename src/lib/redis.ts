@@ -3,6 +3,9 @@ import { Redis } from "@upstash/redis";
 const globalForRedis = globalThis as unknown as { redis: Redis | null };
 
 function createRedisClient(): Redis | null {
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    return null;
+  }
   try {
     return Redis.fromEnv();
   } catch {
