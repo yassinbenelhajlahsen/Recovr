@@ -1,5 +1,185 @@
 [
   {
+    "label": "Bench Session 1",
+    "notes": "Bench progression week 1. [seed]",
+    "duration_minutes": 45,
+    "hoursAgo": 1680,
+    "body_weight": 175.0,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 5, "weight": 135 },
+          { "reps": 5, "weight": 135 },
+          { "reps": 5, "weight": 135 },
+          { "reps": 4, "weight": 135 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Bench Session 2",
+    "notes": "Bench progression week 2. [seed]",
+    "duration_minutes": 45,
+    "hoursAgo": 1512,
+    "body_weight": 176.4,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 5, "weight": 140 },
+          { "reps": 5, "weight": 140 },
+          { "reps": 5, "weight": 140 },
+          { "reps": 4, "weight": 140 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Bench Session 3",
+    "notes": "Bench progression week 3. [seed]",
+    "duration_minutes": 45,
+    "hoursAgo": 1344,
+    "body_weight": 177.8,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 5, "weight": 145 },
+          { "reps": 5, "weight": 145 },
+          { "reps": 4, "weight": 145 },
+          { "reps": 4, "weight": 145 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Bench Session 4",
+    "notes": "Bench progression week 4. [seed]",
+    "duration_minutes": 45,
+    "hoursAgo": 1176,
+    "body_weight": 179.2,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 5, "weight": 145 },
+          { "reps": 5, "weight": 145 },
+          { "reps": 5, "weight": 145 },
+          { "reps": 5, "weight": 145 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Bench Session 5",
+    "notes": "Bench progression week 5. [seed]",
+    "duration_minutes": 50,
+    "hoursAgo": 1008,
+    "body_weight": 180.6,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 5, "weight": 150 },
+          { "reps": 5, "weight": 150 },
+          { "reps": 5, "weight": 150 },
+          { "reps": 4, "weight": 150 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Bench Session 6",
+    "notes": "Bench progression week 6. [seed]",
+    "duration_minutes": 50,
+    "hoursAgo": 840,
+    "body_weight": 182.1,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 5, "weight": 155 },
+          { "reps": 5, "weight": 155 },
+          { "reps": 5, "weight": 155 },
+          { "reps": 4, "weight": 155 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Bench Session 7",
+    "notes": "Bench progression week 7. [seed]",
+    "duration_minutes": 50,
+    "hoursAgo": 672,
+    "body_weight": 183.8,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 5, "weight": 155 },
+          { "reps": 5, "weight": 155 },
+          { "reps": 5, "weight": 155 },
+          { "reps": 5, "weight": 155 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Bench Session 8",
+    "notes": "Bench progression week 8. [seed]",
+    "duration_minutes": 50,
+    "hoursAgo": 504,
+    "body_weight": 185.0,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 5, "weight": 160 },
+          { "reps": 5, "weight": 160 },
+          { "reps": 4, "weight": 160 },
+          { "reps": 4, "weight": 160 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Bench Session 9",
+    "notes": "Bench progression week 9. [seed]",
+    "duration_minutes": 50,
+    "hoursAgo": 336,
+    "body_weight": 186.4,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 5, "weight": 165 },
+          { "reps": 5, "weight": 165 },
+          { "reps": 5, "weight": 165 },
+          { "reps": 4, "weight": 165 }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Bench Session 10",
+    "notes": "Bench progression week 10. [seed]",
+    "duration_minutes": 50,
+    "hoursAgo": 168,
+    "body_weight": 188.2,
+    "exercises": [
+      {
+        "name": "Bench Press",
+        "sets": [
+          { "reps": 5, "weight": 170 },
+          { "reps": 5, "weight": 170 },
+          { "reps": 5, "weight": 170 },
+          { "reps": 4, "weight": 170 }
+        ]
+      }
+    ]
+  },
+  {
     "label": "Push A — Heavy Chest",
     "notes": "Heavy bench focus. [seed]",
     "duration_minutes": 65,

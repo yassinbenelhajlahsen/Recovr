@@ -107,6 +107,7 @@ async function seedWorkouts(exerciseIdByName: Map<string, string>) {
         date: workoutDate,
         notes: workout.notes,
         duration_minutes: workout.duration_minutes,
+        ...(workout.body_weight != null ? { body_weight: workout.body_weight } : {}),
         workout_exercises: {
           create: resolvedExercises.map((ex) => ({
             exercise_id: ex.id,
