@@ -4,6 +4,45 @@
 
 Recvr (Recover) is a recovery-first fitness tracking app that monitors muscle fatigue in real time and uses AI to recommend what to train next. Built for athletes who want data-driven decisions about when to push and when to rest.
 
+Live site: https://recvr.fit
+
+## Demos
+
+<details>
+<summary>Log Workout</summary>
+
+![Log Workout](demos/log_workout.gif)
+
+</details>
+
+<details>
+<summary>Onboarding</summary>
+
+![Onboarding](demos/onboarding.gif)
+
+</details>
+
+<details>
+<summary>Recovery Engine</summary>
+
+![Recovery Engine](demos/recovery_engine.gif)
+
+</details>
+
+<details>
+<summary>AI Suggestions</summary>
+
+![AI Suggestions](demos/suggestion.gif)
+
+</details>
+
+<details>
+<summary>Progress Analytics</summary>
+
+![Progress Analytics](demos/progress.gif)
+
+</details>
+
 ## Features
 
 ### Recovery Intelligence
