@@ -244,9 +244,9 @@ src/
 - **Flow**: Record audio → `POST /api/voice/transcribe` (Groq Whisper, transcribe only) → show editable transcript → user presses "Parse" → `POST /api/voice/parse` (GPT-4o-mini + exercise matching) → show exercises → "Add to workout"
 - **Groq singleton**: `src/lib/groq.ts` — `globalThis` pattern, used only for Whisper transcription. Env var: `GROQ_API_KEY`.
 - **Shared exercise matcher**: `src/lib/exercise-matcher.ts` — `resolveExercise(name, muscleGroups, allExercises, userId)`. Used by both `POST /api/workouts/draft` and `POST /api/voice/parse`.
-- **`POST /api/voice/transcribe`** — accepts `FormData` with `audio` blob. Auth via `getUser()`. Returns `VoiceTranscriptResult` (`{ transcript: string }` only). Rate limited (10/hr, Whisper is the expensive call).
-- **`POST /api/voice/parse`** — accepts JSON `{ transcript: string }`. Auth via `getUser()`. Returns `VoiceTranscribeResponse` (transcript + matched exercises + unmatched). No rate limit.
-- **Rate limiting**: Redis key `voice:{userId}` — max 10 requests/hour on transcribe endpoint only. Graceful skip if Redis unavailable.
+- **`POST /api/voice/transcribe`** — accepts `FormData` with `audio` blob. Auth via `getUser()`. Returns `VoiceTranscriptResult` (`{ transcript: string }` only). Rate limited (10/hr). MIME type validated against allowlist (webm/mp4/mpeg/ogg/wav).
+- **`POST /api/voice/parse`** — accepts JSON `{ transcript: string }`. Auth via `getUser()`. Returns `VoiceTranscribeResponse` (transcript + matched exercises + unmatched). Rate limited (20/hr, Redis key `voice-parse:{userId}`). Transcript max 10,000 chars.
+- **Rate limiting**: Redis key `voice:{userId}` (transcribe, 10/hr), `voice-parse:{userId}` (parse, 20/hr). Graceful skip if Redis unavailable.
 - **Types**: `src/types/voice.ts` — `ParsedExercise`, `VoiceTranscriptResult`, `VoiceTranscribeResponse`
 - **Hook**: `src/components/workout/hooks/useVoiceRecorder.ts` — states: `idle → requesting → recording → transcribing → transcribed → parsing → done → error`. `processAudio()` transcribes only (→ `transcribed`). `parseTranscript()` parses text (→ `done`). Auto-stops at 120s.
 - **Component**: `src/components/workout/VoiceInput.tsx` — mic button next to "Add Exercise" in WorkoutForm. Hidden if `MediaRecorder` unsupported. Shows separate spinners for `transcribing` and `parsing` states.
@@ -285,6 +285,15 @@ src/
 - **`[id]` route params**: pass as `Promise.resolve({ id: "..." })` in tests — routes declare `params: Promise<{ id: string }>`.
 - **useSuggestion hook tests**: mock `swr` module via `vi.mock('swr', ...)` to control `useSWR` return value. Use `vi.useFakeTimers()` for timer decrement tests. Mount with no wrapper needed (SWR is fully mocked).
 - **Test structure**: `src/lib/__tests__/`, `src/store/__tests__/`, `src/components/**/__tests__/`, `src/app/api/**/__tests__/`
+
+## Security
+
+- **Security headers**: `next.config.ts` `headers()` sets `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` globally.
+- **All route handlers wrapped with `withLogging`** — including `src/app/auth/callback/route.ts` (exported as `GET = withLogging(...)`).
+- **Auth callback `next` param**: validated to start with `/` and not `//` before redirect. Never trust raw query param.
+- **Error responses**: always return generic messages (e.g. `"Failed to generate workout suggestion"`). Never forward raw SDK/library error messages to clients.
+- **`getCooldownBypass()`** in `src/lib/cache.ts` returns `false` in production unconditionally (guard inside the function, not just at the route level).
+- **Workout input limits**: max 50 exercises per workout, 20 sets per exercise, reps/weight < 10,000 — enforced in both `POST /api/workouts` and `PUT /api/workouts/[id]`.
 
 ## Logging
 
