@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { MicIcon, MicLargeIcon } from "@/components/ui/icons";
+import { MicIcon, MicLargeIcon, SpinnerIcon, StopIcon } from "@/components/ui/icons";
 import type { VoiceState } from "@/components/workout/hooks/useVoiceRecorder";
 
 type Props = {
@@ -32,10 +32,12 @@ function formatTime(s: number) {
 }
 
 function HeroVoiceInput({ voiceState, elapsed, audioLevels, error, disabled, onToggle, onReset }: Omit<Props, "hero">) {
+  const isIdle = voiceState === "idle" || voiceState === "done" || voiceState === "transcribed";
+  const isProcessing = voiceState === "transcribing" || voiceState === "parsing";
   return (
     <div className="flex flex-col items-center py-2">
       <AnimatePresence mode="wait" initial={false}>
-        {(voiceState === "idle" || voiceState === "done") && (
+        {isIdle && (
           <motion.div
             key="idle"
             initial={{ opacity: 0, scale: 0.92 }}
@@ -119,7 +121,7 @@ function HeroVoiceInput({ voiceState, elapsed, audioLevels, error, disabled, onT
           </motion.div>
         )}
 
-        {voiceState === "processing" && (
+        {isProcessing && (
           <motion.div
             key="processing"
             initial={{ opacity: 0, scale: 0.92 }}
@@ -129,14 +131,12 @@ function HeroVoiceInput({ voiceState, elapsed, audioLevels, error, disabled, onT
             className="flex flex-col items-center gap-4"
           >
             <div className="w-18 h-18 rounded-full bg-surface border-2 border-border-subtle flex items-center justify-center">
-              <svg className="w-8 h-8 animate-spin text-accent" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
+              <SpinnerIcon className="w-8 h-8 text-accent" />
             </div>
             <div className="text-center space-y-2">
-              <p className="font-display text-base italic text-primary">Transcribing your workout…</p>
-              <div className="skeleton h-1 w-32 mx-auto rounded-full" />
+              <p className="font-display text-base italic text-primary">
+                {voiceState === "transcribing" ? "Transcribing your workout…" : "Extracting your exercises…"}
+              </p>
             </div>
           </motion.div>
         )}
@@ -177,7 +177,9 @@ function HeroVoiceInput({ voiceState, elapsed, audioLevels, error, disabled, onT
 }
 
 function CompactVoiceInput({ voiceState, elapsed, error, disabled, onToggle, onReset }: Omit<Props, "hero" | "audioLevels">) {
-  if (voiceState === "idle" || voiceState === "done") {
+  const isIdle = voiceState === "idle" || voiceState === "done" || voiceState === "transcribed";
+  const isProcessing = voiceState === "transcribing" || voiceState === "parsing";
+  if (isIdle) {
     return (
       <button
         type="button"
@@ -212,22 +214,19 @@ function CompactVoiceInput({ voiceState, elapsed, error, disabled, onToggle, onR
           title="Stop recording"
           className="flex items-center justify-center w-9 h-9 rounded-lg text-danger hover:bg-danger/10 transition-colors"
         >
-          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z" />
-          </svg>
+          <StopIcon />
         </button>
       </div>
     );
   }
 
-  if (voiceState === "processing") {
+  if (isProcessing) {
     return (
       <div className="flex items-center gap-2">
-        <svg className="w-4 h-4 shrink-0 animate-spin text-accent" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        <span className="text-xs text-muted font-medium">Transcribing…</span>
+        <SpinnerIcon className="text-accent" />
+        <span className="text-xs text-muted font-medium">
+          {voiceState === "transcribing" ? "Transcribing…" : "Parsing…"}
+        </span>
       </div>
     );
   }

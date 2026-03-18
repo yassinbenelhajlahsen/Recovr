@@ -84,7 +84,7 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
     startRecording,
     stopRecording,
     processAudio,
-    reparse,
+    parseTranscript,
     reset: resetVoice,
   } = useVoiceRecorder();
 
@@ -100,7 +100,7 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
   }
 
   const handleVoiceToggle = useCallback(async () => {
-    if (voiceState === "idle" || voiceState === "error" || voiceState === "done") {
+    if (voiceState === "idle" || voiceState === "error" || voiceState === "done" || voiceState === "transcribed") {
       await startRecording();
     } else if (voiceState === "recording") {
       const blob = await stopRecording();
@@ -111,10 +111,6 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
       }
     }
   }, [voiceState, startRecording, stopRecording, processAudio, resetVoice]);
-
-  const handleReparse = useCallback(async (text: string) => {
-    await reparse(text);
-  }, [reparse]);
 
   const actionButtons = (
     <div className="sticky bottom-0 -mx-5 px-5 pt-4 pb-5 bg-elevated border-t border-border">
@@ -255,12 +251,13 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
           )}
         </div>
 
-        {voiceState === "done" && voiceResult && transcript && (
+        {(voiceState === "transcribed" || voiceState === "done") && transcript && (
           <VoiceResultPanel
+            voiceState={voiceState}
             transcript={transcript}
             result={voiceResult}
+            onParse={parseTranscript}
             onAdd={handleVoiceExercises}
-            onReparse={handleReparse}
             onDiscard={resetVoice}
           />
         )}
@@ -290,7 +287,7 @@ export function WorkoutForm({ workoutId, initialData, onSave, onDraftSave, onCan
                 customLoading={customLoading}
               />
             </motion.div>
-          ) : exercises.length === 0 && voiceState !== "done" ? (
+          ) : exercises.length === 0 && voiceState !== "done" && voiceState !== "transcribed" ? (
             <motion.div
               key="empty-state"
               initial={{ opacity: 0 }}

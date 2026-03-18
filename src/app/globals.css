@@ -20,6 +20,7 @@
   --c-danger: hsl(5, 48%, 42%);
   --c-success: hsl(150, 35%, 36%);
   --c-recovery-yellow: hsl(40, 55%, 38%);
+  --c-draft: hsl(215, 50%, 30%);
 }
 
 .dark {
@@ -36,6 +37,7 @@
   --c-danger: #E53E3E;
   --c-success: #40916C;
   --c-recovery-yellow: #D4A017;
+  --c-draft: hsl(215, 55%, 62%);
 }
 
 @theme inline {
@@ -56,6 +58,7 @@
   --color-danger: var(--c-danger);
   --color-success: var(--c-success);
   --color-recovery-yellow: var(--c-recovery-yellow);
+  --color-draft: var(--c-draft);
 }
 
 /* ─── Display font tuning ─── */

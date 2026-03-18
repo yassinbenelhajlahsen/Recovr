@@ -5,7 +5,12 @@ export type ParsedExercise = {
   sets: { reps: number; weight: number | null }[];
 };
 
-/** API response after DB matching */
+/** Response from transcribe-only endpoint */
+export type VoiceTranscriptResult = {
+  transcript: string;
+};
+
+/** API response after DB matching (parse endpoint) */
 export type VoiceTranscribeResponse = {
   transcript: string;
   exercises: {

@@ -241,14 +241,16 @@ src/
 
 ### Voice Workout Logging
 
-- **Flow**: Record audio → Groq Whisper transcription → OpenAI GPT-4o-mini structured parsing → DB exercise matching → populate WorkoutForm
+- **Flow**: Record audio → `POST /api/voice/transcribe` (Groq Whisper, transcribe only) → show editable transcript → user presses "Parse" → `POST /api/voice/parse` (GPT-4o-mini + exercise matching) → show exercises → "Add to workout"
 - **Groq singleton**: `src/lib/groq.ts` — `globalThis` pattern, used only for Whisper transcription. Env var: `GROQ_API_KEY`.
-- **Shared exercise matcher**: `src/lib/exercise-matcher.ts` — `resolveExercise(name, muscleGroups, allExercises, userId)`. Used by both `POST /api/workouts/draft` and `POST /api/voice/transcribe`.
-- **API**: `POST /api/voice/transcribe` — accepts `FormData` with `audio` blob. Auth via `getUser()`. Returns `VoiceTranscribeResponse` (transcript + matched exercises + unmatched names).
-- **Rate limiting**: Redis key `voice:{userId}` — max 10 requests/hour. Graceful skip if Redis unavailable.
-- **Types**: `src/types/voice.ts` — `ParsedExercise`, `VoiceTranscribeResponse`
-- **Hook**: `src/components/workout/hooks/useVoiceRecorder.ts` — states: `idle → requesting → recording → processing → done → error`. Auto-stops at 120s. Uses `fetchWithAuth` for API call.
-- **Component**: `src/components/workout/VoiceInput.tsx` — mic button next to "Add Exercise" in WorkoutForm. Hidden if `MediaRecorder` unsupported.
+- **Shared exercise matcher**: `src/lib/exercise-matcher.ts` — `resolveExercise(name, muscleGroups, allExercises, userId)`. Used by both `POST /api/workouts/draft` and `POST /api/voice/parse`.
+- **`POST /api/voice/transcribe`** — accepts `FormData` with `audio` blob. Auth via `getUser()`. Returns `VoiceTranscriptResult` (`{ transcript: string }` only). Rate limited (10/hr, Whisper is the expensive call).
+- **`POST /api/voice/parse`** — accepts JSON `{ transcript: string }`. Auth via `getUser()`. Returns `VoiceTranscribeResponse` (transcript + matched exercises + unmatched). No rate limit.
+- **Rate limiting**: Redis key `voice:{userId}` — max 10 requests/hour on transcribe endpoint only. Graceful skip if Redis unavailable.
+- **Types**: `src/types/voice.ts` — `ParsedExercise`, `VoiceTranscriptResult`, `VoiceTranscribeResponse`
+- **Hook**: `src/components/workout/hooks/useVoiceRecorder.ts` — states: `idle → requesting → recording → transcribing → transcribed → parsing → done → error`. `processAudio()` transcribes only (→ `transcribed`). `parseTranscript()` parses text (→ `done`). Auto-stops at 120s.
+- **Component**: `src/components/workout/VoiceInput.tsx` — mic button next to "Add Exercise" in WorkoutForm. Hidden if `MediaRecorder` unsupported. Shows separate spinners for `transcribing` and `parsing` states.
+- **`VoiceResultPanel`**: Phase 1 (`transcribed`) shows transcript + "Parse" button. Phase 2 (`done`) shows transcript + exercise count + "Add to workout". Editing transcript in phase 2 replaces "Add to workout" with "Re-parse".
 - **Bulk add**: `useExerciseList.bulkAddExercises()` — merges sets when same `exercise_id` appears multiple times, appends new exercises.
 - **Icons**: `MicIcon`, `StopIcon` in `src/components/ui/icons.tsx`
 
