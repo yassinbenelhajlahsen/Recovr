@@ -96,7 +96,7 @@ export function DashboardClient({ displayName, workouts, hasFilters, recovery, o
                               {w.dateFormatted}
                             </p>
                             {w.isDraft && (
-                              <span className="text-xs font-medium text-recovery-yellow bg-recovery-yellow/10 border border-recovery-yellow/20 rounded-full px-2 py-0.5">
+                              <span className="text-xs font-medium text-draft bg-draft/10 border border-draft/25 rounded-full px-2 py-0.5">
                                 Draft
                               </span>
                             )}

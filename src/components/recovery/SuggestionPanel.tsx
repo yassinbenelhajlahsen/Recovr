@@ -665,7 +665,7 @@ function HistoryCard({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {item.draft_id && (
-            <span className="text-xs text-recovery-yellow bg-recovery-yellow/10 border border-recovery-yellow/20 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-medium text-draft bg-draft/10 border border-draft/25 px-2 py-0.5 rounded-full">
               Draft
             </span>
           )}
