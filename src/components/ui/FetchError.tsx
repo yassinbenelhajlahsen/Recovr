@@ -22,9 +22,9 @@ export function FetchError({ onRetry }: Props) {
         <button
           type="button"
           onClick={onRetry}
-          className="mt-1 rounded-lg border border-border px-4 py-2 text-xs font-medium text-secondary hover:text-primary hover:border-border-subtle transition-colors"
+          className="mt-1 flex items-center gap-1.5 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-medium text-secondary transition-colors hover:border-border hover:bg-elevated hover:text-primary active:scale-95"
         >
-          Retry
+         Retry
         </button>
       )}
     </div>
