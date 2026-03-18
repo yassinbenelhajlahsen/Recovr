@@ -140,7 +140,7 @@ export async function setCooldownBypass(userId: string): Promise<void> {
 }
 
 export async function getCooldownBypass(userId: string): Promise<boolean> {
-  if (!redis) return false;
+  if (!redis || process.env.NODE_ENV === "production") return false;
   try {
     const val = await redis.get(`suggestion-bypass:${userId}`);
     return val === "1";

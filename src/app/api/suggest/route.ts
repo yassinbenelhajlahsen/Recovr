@@ -183,9 +183,8 @@ function createSuggestionStream(
         const suggestionId = await persistSuggestion(userId, suggestion, presets);
         if (suggestionId) await setCachedSuggestionId(userId, suggestionId);
         emit(controller, { type: "done", suggestionId: suggestionId ?? undefined });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Stream failed";
-        emit(controller, { type: "error", message: msg });
+      } catch {
+        emit(controller, { type: "error", message: "Failed to generate workout suggestion" });
       } finally {
         controller.close();
       }
@@ -282,9 +281,8 @@ export const POST = withLogging(async function POST(request: Request) {
         { role: "user", content: userPrompt },
       ],
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to generate workout";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Failed to generate workout suggestion" }, { status: 500 });
   }
 
   const stream = createSuggestionStream(openaiStream, user.id, selectedPresets);
