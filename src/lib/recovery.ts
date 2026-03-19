@@ -1,27 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { getCachedRecovery, setCachedRecovery } from "@/lib/cache";
+import { MUSCLE_GROUPS } from "@/lib/constants";
 import type { MuscleRecovery } from "@/types/recovery";
 
 export type { MuscleRecovery };
-
-export const MUSCLE_GROUPS = [
-  "chest",
-  "triceps",
-  "shoulders",
-  "lower back",
-  "hamstrings",
-  "glutes",
-  "traps",
-  "back",
-  "biceps",
-  "rear shoulders",
-  "quadriceps",
-  "calves",
-  "forearms",
-  "core",
-  "hip flexors",
-  "tibialis",
-] as const;
+export { MUSCLE_GROUPS };
 
 const BASE_RECOVERY_HOURS = 48;
 const VOLUME_THRESHOLD = 2500; // lbs — "normal" session volume for a muscle group

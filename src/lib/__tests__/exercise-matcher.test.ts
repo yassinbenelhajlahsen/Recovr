@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resolveExercise } from "@/lib/exercise-matcher";
+import { resolveExercise } from "@/lib/exerciseMatcher";
 import { prisma } from "@/lib/prisma";
 
 const USER_ID = "user-123";

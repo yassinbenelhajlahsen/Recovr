@@ -3,6 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { invalidateRecovery, invalidateSuggestionDraftId } from "@/lib/cache";
 import { logger, withLogging } from "@/lib/logger";
+import {
+  validateWorkoutDate,
+  validateExercises,
+  parseDuration,
+  parseBodyWeight,
+  syncProfileWeight,
+} from "@/lib/workout-validation";
 
 const WORKOUT_INCLUDE = {
   workout_exercises: {
@@ -63,58 +70,19 @@ export const PUT = withLogging(async function PUT(
 
     const { date, notes, duration_minutes, body_weight, exercises } = body;
 
-    // Validate date
-    if (date) {
-      const parsed = new Date(`${date}T00:00:00Z`);
-      if (isNaN(parsed.getTime())) {
-        return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
-      }
-      const tomorrow = new Date();
-      tomorrow.setUTCHours(0, 0, 0, 0);
-      tomorrow.setUTCDate(tomorrow.getUTCDate() + 2);
-      if (parsed >= tomorrow) {
-        return NextResponse.json({ error: "Date cannot be in the future" }, { status: 400 });
-      }
-    }
+    const dateError = validateWorkoutDate(date);
+    if (dateError) return dateError;
 
-    // Validate sets
     if (Array.isArray(exercises)) {
-      if (exercises.length > 50) {
-        return NextResponse.json({ error: "Too many exercises (max 50)" }, { status: 400 });
-      }
-      for (const ex of exercises) {
-        if (!Array.isArray(ex.sets)) continue;
-        if (ex.sets.length > 20) {
-          return NextResponse.json({ error: "Too many sets per exercise (max 20)" }, { status: 400 });
-        }
-        for (const s of ex.sets) {
-          const reps = parseInt(String(s.reps));
-          const weight = parseFloat(String(s.weight));
-          if (isNaN(reps) || isNaN(weight)) {
-            return NextResponse.json({ error: "Reps and weight must be valid numbers" }, { status: 400 });
-          }
-          if (reps < 0 || weight < 0) {
-            return NextResponse.json({ error: "Reps or weight cannot be negative" }, { status: 400 });
-          }
-          if (reps > 10000 || weight > 10000) {
-            return NextResponse.json({ error: "Reps or weight values are out of range" }, { status: 400 });
-          }
-        }
-      }
+      const exercisesError = validateExercises(exercises);
+      if (exercisesError) return exercisesError;
     }
 
-    const parsedDuration = duration_minutes ? parseInt(String(duration_minutes)) : null;
-    if (parsedDuration !== null && isNaN(parsedDuration)) {
-      return NextResponse.json({ error: "duration_minutes must be a valid number" }, { status: 400 });
-    }
-    if (parsedDuration !== null && (parsedDuration < 1 || parsedDuration > 999)) {
-      return NextResponse.json({ error: "Duration must be between 1 and 999 minutes" }, { status: 400 });
-    }
+    const { value: parsedDuration, error: durationError } = parseDuration(duration_minutes);
+    if (durationError) return durationError;
 
-    const parsedBodyWeight = body_weight != null ? parseFloat(String(body_weight)) : null;
-    if (parsedBodyWeight !== null && (isNaN(parsedBodyWeight) || parsedBodyWeight < 1 || parsedBodyWeight > 999)) {
-      return NextResponse.json({ error: "Body weight must be between 1 and 999" }, { status: 400 });
-    }
+    const { value: parsedBodyWeight, error: bodyWeightError } = parseBodyWeight(body_weight);
+    if (bodyWeightError) return bodyWeightError;
 
     // Verify all submitted exercise IDs belong to this user or are global exercises.
     if (Array.isArray(exercises)) {
@@ -163,17 +131,7 @@ export const PUT = withLogging(async function PUT(
 
     // Smart sync: update User.weight_lbs only if this is the latest workout with body_weight
     if (parsedBodyWeight) {
-      const latest = await prisma.workout.findFirst({
-        where: { user_id: user.id, body_weight: { not: null } },
-        orderBy: { date: "desc" },
-        select: { id: true, body_weight: true },
-      });
-      if (latest && latest.id === id) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { weight_lbs: Math.round(parsedBodyWeight) },
-        });
-      }
+      await syncProfileWeight(user.id, id, parsedBodyWeight);
     }
 
     return NextResponse.json(workout);

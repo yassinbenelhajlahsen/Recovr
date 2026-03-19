@@ -1,20 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import useSWR from "swr";
 import type { MuscleRecovery } from "@/types/recovery";
-import type { Gender } from "@/types/user";
+import type { UserProfile } from "@/types/user";
 import { BodyMapFront } from "./BodyMapFront";
 import { BodyMapBack } from "./BodyMapBack";
 import { useRecoverySelection } from "./hooks/useRecoverySelection";
 import { useRecovery } from "@/lib/hooks";
+import { normalizeGender } from "@/lib/utils";
 
 type Props = {
   recovery: MuscleRecovery[];
-  gender?: Gender;
 };
 
-export function RecoveryPanel({ recovery: serverRecovery, gender }: Props) {
+export function RecoveryPanel({ recovery: serverRecovery }: Props) {
   const { data: recovery = serverRecovery } = useRecovery(serverRecovery);
+  const { data: profile } = useSWR<UserProfile>("/api/user/profile");
+  const gender = normalizeGender(profile?.gender);
   const { muscleMap, fatigued, partial, recovered } = useRecoverySelection(recovery);
 
   return (

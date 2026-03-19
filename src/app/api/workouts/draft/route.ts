@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { invalidateExercises, setSuggestionDraftId } from "@/lib/cache";
-import { resolveExercise } from "@/lib/exercise-matcher";
+import { resolveExercise } from "@/lib/exerciseMatcher";
+import { validateWorkoutDate } from "@/lib/workout-validation";
 import { linkDraftToSuggestion } from "@/lib/suggestion";
 import { logger, withLogging } from "@/lib/logger";
 import type { WorkoutSuggestion, SuggestedExercise } from "@/types/suggestion";
@@ -40,17 +41,8 @@ export const POST = withLogging(async function POST(request: Request) {
 
   const now = new Date();
 
-  if (date) {
-    if (isNaN(new Date(date).getTime())) {
-      return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
-    }
-    const tomorrow = new Date();
-    tomorrow.setUTCHours(0, 0, 0, 0);
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 2);
-    if (new Date(`${date}T00:00:00Z`) >= tomorrow) {
-      return NextResponse.json({ error: "Date cannot be in the future" }, { status: 400 });
-    }
-  }
+  const dateError = validateWorkoutDate(date);
+  if (dateError) return dateError;
 
   const storedDate = date
     ? new Date(`${date}T${now.toISOString().slice(11)}`)

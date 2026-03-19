@@ -17,7 +17,7 @@ export const POST = withLogging(async function POST(request: Request) {
   const userId = user.id;
   const rateLimitKey = `voice:${userId}`;
 
-  // Rate limiting — Whisper is the expensive call
+  // Rate limiting — check but don't increment yet (increment after successful transcription)
   if (redis) {
     try {
       const count = await redis.get<number>(rateLimitKey);
@@ -53,7 +53,8 @@ export const POST = withLogging(async function POST(request: Request) {
   }
 
   const ALLOWED_AUDIO_TYPES = ["audio/webm", "audio/mp4", "audio/mpeg", "audio/ogg", "audio/wav"];
-  if (audio.type && !ALLOWED_AUDIO_TYPES.includes(audio.type)) {
+  const baseType = audio.type?.split(";")[0];
+  if (baseType && !ALLOWED_AUDIO_TYPES.includes(baseType)) {
     return NextResponse.json({ error: "Unsupported audio format" }, { status: 400 });
   }
 

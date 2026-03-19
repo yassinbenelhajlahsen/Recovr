@@ -2,20 +2,18 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { openai } from "@/lib/openai";
-import { resolveExercise } from "@/lib/exercise-matcher";
+import { resolveExercise } from "@/lib/exerciseMatcher";
 import { invalidateExercises } from "@/lib/cache";
-import { redis } from "@/lib/redis";
 import { logger, withLogging } from "@/lib/logger";
+import { MUSCLE_GROUPS } from "@/lib/constants";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { ParsedExercise, VoiceTranscribeResponse } from "@/types/voice";
 
 const PARSE_RATE_LIMIT_MAX = 20;
 const PARSE_RATE_LIMIT_WINDOW = 3600; // 1 hour
 
-const VALID_MUSCLE_GROUPS = new Set([
-  "chest", "back", "shoulders", "biceps", "triceps", "forearms",
-  "core", "abs", "quadriceps", "hamstrings", "glutes", "calves",
-  "hip flexors", "traps", "rear shoulders", "tibialis",
-]);
+// Extends canonical muscle groups with "abs" (common spoken variant of "core")
+const VALID_MUSCLE_GROUPS = new Set([...MUSCLE_GROUPS, "abs"]);
 
 const SYSTEM_PROMPT = `You are a workout parser. Given a transcription of someone describing their workout, extract the exercises, sets, reps, and weights into structured JSON.
 
@@ -37,24 +35,8 @@ export const POST = withLogging(async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Rate limiting — GPT-4o-mini parsing
-  if (redis) {
-    try {
-      const parseKey = `voice-parse:${user.id}`;
-      const count = await redis.get<number>(parseKey);
-      if (count !== null && count >= PARSE_RATE_LIMIT_MAX) {
-        const ttl = await redis.ttl(parseKey);
-        return NextResponse.json(
-          { error: "Rate limit exceeded. Try again later." },
-          { status: 429, headers: { "Retry-After": String(ttl > 0 ? ttl : PARSE_RATE_LIMIT_WINDOW) } },
-        );
-      }
-      const newCount = await redis.incr(parseKey);
-      if (newCount === 1) await redis.expire(parseKey, PARSE_RATE_LIMIT_WINDOW);
-    } catch {
-      // Redis failure = skip rate limit
-    }
-  }
+  const rateLimitError = await checkRateLimit(`voice-parse:${user.id}`, PARSE_RATE_LIMIT_MAX, PARSE_RATE_LIMIT_WINDOW);
+  if (rateLimitError) return rateLimitError;
 
   const body = await request.json().catch(() => null);
   const transcript = body?.transcript?.trim();

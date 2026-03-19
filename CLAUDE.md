@@ -37,8 +37,9 @@ npm run test:e2e         # Run Playwright E2E tests
 - **Client Components**: `createClient()` from `@/lib/supabase/client`
 - **Server Components / Route Handlers**: `await createClient()` from `@/lib/supabase/server`
 - **Middleware**: `src/proxy.ts` calls `updateSession()` from `src/lib/supabase/middleware.ts`
-- After `signInWithPassword`, call `ensureUserInDb(user)` from `@/lib/supabase/ensure-user`
+- After `signInWithPassword`, call `ensureUserInDb(user)` from `@/lib/supabase/ensureUser`
 - OAuth callback syncs user via `src/app/auth/callback/route.ts`
+- **Shared OAuth hook**: `src/app/auth/useOAuthSignIn.ts` — used by both signin and signup pages. Returns `{ googleLoading, appleLoading, handleGoogleSignIn, handleAppleSignIn }`.
 - **OAuth upsert**: use `where: { email }` (not `id`) to avoid P2002 errors when same email exists across providers
 - **GET routes** use `getClaims()` (local JWT verification, fast). **Mutations** use `getUser()` (server-side validation).
 - `getClaims()` → extract user ID via `claims.claims.sub`, email via `claims.claims.email`
@@ -146,7 +147,8 @@ src/
 │   ├── api/exercises|workouts|recovery|user|progress/   # REST endpoints
 │   └── recovery|progress|onboarding|privacy|terms-of-service|mobile/
 ├── components/
-│   ├── DashboardClient.tsx
+│   ├── dashboard/      # DashboardClient
+│   ├── landing/        # LandingClient, LandingIllustrations
 │   ├── workout/        # WorkoutDetailDrawer, WorkoutForm, ExerciseCard, etc. + hooks/
 │   ├── recovery/       # RecoveryPanel, RecoveryView, BodyMap*, MuscleDetailPanel + hooks/
 │   ├── progress/       # ProgressClient, charts, selectors + hooks/
@@ -155,7 +157,7 @@ src/
 │   ├── settings/       # SettingsDrawer, AccountTab, FitnessTab + hooks/
 │   └── ui/             # Modal, Drawer, DropdownMenu, FloatingInput, GoalSelector, BackButton, icons
 ├── store/              # Zustand: workoutStore, appStore, clientStore
-├── lib/                # prisma.ts, openai.ts, recovery.ts, units.ts, utils.ts, fetch.ts, hooks.ts, logger.ts, supabase/
+├── lib/                # prisma.ts, openai.ts, recovery.ts, units.ts, utils.ts, fetch.ts, hooks.ts, logger.ts, constants.ts, workout-validation.ts, rate-limit.ts, exerciseMatcher.ts, supabase/
 └── proxy.ts            # Route protection
 ```
 
@@ -168,10 +170,10 @@ src/
 
 ### Recovery Engine
 
-- Computed on-the-fly from last 96h workouts — no DB tables. See `src/lib/recovery.ts`.
+- Computed on-the-fly from last 96h workouts — no DB tables. See `src/lib/recovery.ts`. Canonical `MUSCLE_GROUPS` array lives in `src/lib/constants.ts` (re-exported from `recovery.ts`).
 - Status thresholds: `recovered` ≥ 0.85, `partial` ≥ 0.45, `fatigued` < 0.45
 - SVG body maps via `@mjcdev/react-body-highlighter`, HSL interpolation in `recoveryColors.ts`; `gender` prop (`"male"` | `"female"`, defaults to `"male"` for `null`) flows from DB through page → RecoveryView/RecoveryPanel → BodyMapFront/BodyMapBack. Library only supports male/female — no neutral option.
-- `RecoveryPanel` (dashboard) is view-only. Full interaction on `/recovery`.
+- `RecoveryPanel` (dashboard) is view-only, fetches gender via SWR (`/api/user/profile`) instead of prop. Full interaction on `/recovery`.
 
 ### Body Weight Tracking
 
@@ -221,7 +223,7 @@ src/
 - `POST /api/workouts/draft` — exercise matching (exact name → substring → create custom, resolved **sequentially** to avoid duplicate custom exercises) + creates with `is_draft: true, source: "suggested"`
 - `WorkoutForm` also shows "Save as Draft" (ghost button, appears once form has ≥1 exercise) — POSTs to `/api/workouts` with `is_draft: true, source: "manual"`
 - `PATCH /api/workouts/[id]` — only flips `is_draft`; used for publish flow from draft view
-- Draft view in WorkoutViewDetail shows "Save Workout" (accent) + "Edit" + Delete instead of just Edit + Delete
+- Draft view in WorkoutViewDetail shows "Save Workout" (accent) + "Edit" + Delete instead of just Edit + Delete. Publish logic extracted to `usePublishDraft` hook in `src/components/workout/hooks/usePublishDraft.ts`.
 - `source` field (`"manual"` | `"suggested"`) is internal only, never shown to users
 
 ### Redis Caching (Upstash)
@@ -243,16 +245,16 @@ src/
 
 - **Flow**: Record audio → `POST /api/voice/transcribe` (Groq Whisper, transcribe only) → show editable transcript → user presses "Parse" → `POST /api/voice/parse` (GPT-4o-mini + exercise matching) → show exercises → "Add to workout"
 - **Groq singleton**: `src/lib/groq.ts` — `globalThis` pattern, used only for Whisper transcription. Env var: `GROQ_API_KEY`.
-- **Shared exercise matcher**: `src/lib/exercise-matcher.ts` — `resolveExercise(name, muscleGroups, allExercises, userId)`. Used by both `POST /api/workouts/draft` and `POST /api/voice/parse`.
-- **`POST /api/voice/transcribe`** — accepts `FormData` with `audio` blob. Auth via `getUser()`. Returns `VoiceTranscriptResult` (`{ transcript: string }` only). Rate limited (10/hr). MIME type validated against allowlist (webm/mp4/mpeg/ogg/wav).
+- **Shared exercise matcher**: `src/lib/exerciseMatcher.ts` — `resolveExercise(name, muscleGroups, allExercises, userId)`. Used by both `POST /api/workouts/draft` and `POST /api/voice/parse`.
+- **`POST /api/voice/transcribe`** — accepts `FormData` with `audio` blob. Auth via `getUser()`. Returns `VoiceTranscriptResult` (`{ transcript: string }` only). Rate limited (10/hr). MIME type validated against allowlist (webm/mp4/mpeg/ogg/wav); codec params stripped before check (`audio/webm;codecs=opus` → `audio/webm`).
 - **`POST /api/voice/parse`** — accepts JSON `{ transcript: string }`. Auth via `getUser()`. Returns `VoiceTranscribeResponse` (transcript + matched exercises + unmatched). Rate limited (20/hr, Redis key `voice-parse:{userId}`). Transcript max 10,000 chars.
-- **Rate limiting**: Redis key `voice:{userId}` (transcribe, 10/hr), `voice-parse:{userId}` (parse, 20/hr). Graceful skip if Redis unavailable.
+- **Rate limiting**: Redis key `voice:{userId}` (transcribe, 10/hr), `voice-parse:{userId}` (parse, 20/hr). Parse route uses shared `checkRateLimit()` from `src/lib/rate-limit.ts`. Graceful skip if Redis unavailable.
 - **Types**: `src/types/voice.ts` — `ParsedExercise`, `VoiceTranscriptResult`, `VoiceTranscribeResponse`
 - **Hook**: `src/components/workout/hooks/useVoiceRecorder.ts` — states: `idle → requesting → recording → transcribing → transcribed → parsing → done → error`. `processAudio()` transcribes only (→ `transcribed`). `parseTranscript()` parses text (→ `done`). Auto-stops at 120s.
 - **Component**: `src/components/workout/VoiceInput.tsx` — mic button next to "Add Exercise" in WorkoutForm. Hidden if `MediaRecorder` unsupported. Shows separate spinners for `transcribing` and `parsing` states.
 - **`VoiceResultPanel`**: Phase 1 (`transcribed`) shows transcript + "Parse" button. Phase 2 (`done`) shows transcript + exercise count + "Add to workout". Editing transcript in phase 2 replaces "Add to workout" with "Re-parse".
 - **Bulk add**: `useExerciseList.bulkAddExercises()` — merges sets when same `exercise_id` appears multiple times, appends new exercises.
-- **Icons**: `MicIcon`, `StopIcon` in `src/components/ui/icons.tsx`
+- **Icons**: `MicIcon`, `StopIcon`, `GoogleIcon` in `src/components/ui/icons.tsx`
 
 ## Client-Side Data Fetching (SWR)
 
@@ -267,7 +269,7 @@ src/
 ## Testing
 
 - **Vitest + RTL** for unit/integration/component tests. **Playwright** for E2E.
-- `npm run test:run` — all Vitest tests (259 as of Tier 3 test expansion). `npm run test:e2e` — Playwright smoke + authenticated E2E suites.
+- `npm run test:run` — all Vitest tests (287). `npm run test:e2e` — Playwright smoke + authenticated E2E suites.
 - **Mock aliases** in `vitest.config.ts` (array format, specific before generic): `@/generated/prisma/client`, `@/lib/prisma`, `@/lib/supabase/server`, `@/lib/supabase/client`, `@/lib/openai`, `@/lib/groq`, `@/lib/redis`, `@/lib/logger` all map to `src/test/mocks/`.
 - **`@/lib/cache` intentionally NOT aliased** — tests hit real cache logic against the redis mock.
 - **Redis mock** (`src/test/mocks/redis.ts`) exports a non-null object with `get/set/del/ttl/incr/expire` as `vi.fn()`. Default: `get→null`, `ttl→-2` (key not found), `set/del/incr/expire→OK/1`. Tests override per-test with `mockResolvedValue`.
@@ -293,7 +295,9 @@ src/
 - **Auth callback `next` param**: validated to start with `/` and not `//` before redirect. Never trust raw query param.
 - **Error responses**: always return generic messages (e.g. `"Failed to generate workout suggestion"`). Never forward raw SDK/library error messages to clients.
 - **`getCooldownBypass()`** in `src/lib/cache.ts` returns `false` in production unconditionally (guard inside the function, not just at the route level).
-- **Workout input limits**: max 50 exercises per workout, 20 sets per exercise, reps/weight < 10,000 — enforced in both `POST /api/workouts` and `PUT /api/workouts/[id]`.
+- **Workout input limits**: max 50 exercises per workout, 20 sets per exercise, reps/weight < 10,000 — enforced in both `POST /api/workouts` and `PUT /api/workouts/[id]`. Limits defined as constants in `src/lib/constants.ts`.
+- **Shared validation**: `src/lib/workout-validation.ts` — `validateWorkoutDate`, `validateExercises`, `parseDuration`, `parseBodyWeight`, `syncProfileWeight`. Used by `POST /api/workouts`, `PUT /api/workouts/[id]`, `POST /api/workouts/draft`.
+- **Shared rate limiting**: `src/lib/rate-limit.ts` — `checkRateLimit(key, max, windowSeconds)` returns 429 `NextResponse` or `null`. Graceful no-op if Redis unavailable.
 
 ## Logging
 

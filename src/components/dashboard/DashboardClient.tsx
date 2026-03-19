@@ -9,7 +9,7 @@ import { WorkoutsFilter } from "@/components/workout/WorkoutsFilter";
 import { RecoveryPanel } from "@/components/recovery/RecoveryPanel";
 import type { DashboardClientProps as Props, Workout } from "@/types/workout";
 
-export function DashboardClient({ displayName, workouts, hasFilters, recovery, openDraftId, gender }: Props) {
+export function DashboardClient({ displayName, workouts, hasFilters, recovery, openDraftId }: Props) {
   const openDrawer = useWorkoutStore((s) => s.openDrawer);
   const deletingWorkoutId = useWorkoutStore((s) => s.deletingWorkoutId);
   const setDeletingWorkoutId = useWorkoutStore((s) => s.setDeletingWorkoutId);
@@ -177,7 +177,7 @@ export function DashboardClient({ displayName, workouts, hasFilters, recovery, o
 
           {/* ─── Right column: recovery ─── */}
           <div className="w-full xl:w-96 shrink-0 xl:sticky xl:top-24">
-            <RecoveryPanel recovery={recovery} gender={gender} />
+            <RecoveryPanel recovery={recovery} />
           </div>
 
       </div>
