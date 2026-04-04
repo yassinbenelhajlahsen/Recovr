@@ -10,5 +10,4 @@ export const redis = {
   ttl: vi.fn().mockResolvedValue(-2), // -2 = key does not exist in Redis
   incr: vi.fn().mockResolvedValue(1),
   expire: vi.fn().mockResolvedValue(1),
-  ping: vi.fn().mockResolvedValue("PONG"),
 };
