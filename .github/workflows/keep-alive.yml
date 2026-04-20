@@ -17,11 +17,3 @@ jobs:
           curl -sf -o /dev/null "$SUPABASE_URL/rest/v1/Exercise?select=id&limit=1" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
-
-      - name: Ping Upstash Redis
-        env:
-          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-        run: |
-          curl -sf -o /dev/null "$UPSTASH_REDIS_REST_URL/ping" \
-            -H "Authorization: Bearer $UPSTASH_REDIS_REST_TOKEN"
