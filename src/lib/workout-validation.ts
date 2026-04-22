@@ -46,7 +46,7 @@ export function validateExercises(exercises: unknown[]): NextResponse | null {
     }
     for (const s of ex.sets as RawSet[]) {
       const reps = parseInt(String(s.reps));
-      const weight = parseFloat(String(s.weight));
+      const weight = s.weight == null ? 0 : parseFloat(String(s.weight));
       if (isNaN(reps) || isNaN(weight)) {
         return NextResponse.json({ error: "Reps and weight must be valid numbers" }, { status: 400 });
       }

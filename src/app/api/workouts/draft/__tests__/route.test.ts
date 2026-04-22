@@ -41,6 +41,24 @@ describe("POST /api/workouts/draft", () => {
     expect(data.id).toBe("draft-workout-1");
   });
 
+  it("accepts bodyweight exercises with weight: null", async () => {
+    const suggestion = {
+      ...VALID_SUGGESTION,
+      exercises: [
+        {
+          name: "Bench Press",
+          muscleGroups: ["chest"],
+          sets: [
+            { reps: 6, weight: null },
+            { reps: 6, weight: null },
+          ],
+        },
+      ],
+    };
+    const res = await POST(makePostRequest({ suggestion }));
+    expect(res.status).toBe(201);
+  });
+
   it("returns 401 when unauthenticated", async () => {
     mockUnauthorized();
     const res = await POST(makePostRequest({ suggestion: VALID_SUGGESTION }));
