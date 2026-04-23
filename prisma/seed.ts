@@ -9,7 +9,7 @@ import SEED_WORKOUTS from "./data/workouts.json";
 const adapter = new PrismaPg({ connectionString: process.env["DATABASE_URL"]! });
 const prisma = new PrismaClient({ adapter });
 
-const SEED_USER_ID = "eeb01c12-f1a9-4bae-925b-e93f05c9ad34";
+const SEED_USER_ID = "4490e878-0fa2-4aaa-ad9e-314e1b1de685";
 
 async function seedExercises() {
   console.log("Seeding default exercises…");
