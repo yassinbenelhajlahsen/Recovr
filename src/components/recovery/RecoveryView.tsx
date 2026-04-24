@@ -22,7 +22,7 @@ export function RecoveryView() {
   // a flash from male (default) → actual gender on page load.
   const profileReady = profile !== undefined;
   const gender = normalizeGender(profile?.gender);
-  const { selectedMuscle, selectedData, muscleMap, handleSelect, fatigued, partial, recovered } =
+  const {selectedData, muscleMap, handleSelect, clearSelection, fatigued, partial, recovered } =
     useRecoverySelection(recovery);
 
   if (recoveryError) return <FetchError onRetry={() => mutateRecovery()} />;
@@ -75,7 +75,7 @@ export function RecoveryView() {
           <AnimatePresence mode="wait" initial={false}>
             {selectedData ? (
               <motion.div
-                key={selectedData.muscle}
+                key="panel"
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
@@ -84,7 +84,7 @@ export function RecoveryView() {
               >
                 <MuscleDetailPanel
                   recovery={selectedData}
-                  onClose={() => handleSelect(selectedMuscle!)}
+                  onClose={clearSelection}
                 />
               </motion.div>
             ) : (

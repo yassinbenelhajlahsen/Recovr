@@ -8,6 +8,7 @@ export type UseRecoverySelectionResult = {
   selectedData: MuscleRecovery | null;
   muscleMap: RecoveryMuscleMap;
   handleSelect: (name: string) => void;
+  clearSelection: () => void;
   fatigued: number;
   partial: number;
   recovered: number;
@@ -31,8 +32,12 @@ export function useRecoverySelection(muscles: MuscleRecovery[]): UseRecoverySele
   const recovered = useMemo(() => muscles.filter((r) => r.status === "recovered").length, [muscles]);
 
   const handleSelect = useCallback((name: string) => {
-    setSelectedMuscle((prev) => (prev === name ? null : name));
+    setSelectedMuscle(name);
   }, []);
 
-  return { selectedMuscle, selectedData, muscleMap, handleSelect, fatigued, partial, recovered };
+  const clearSelection = useCallback(() => {
+    setSelectedMuscle(null);
+  }, []);
+
+  return { selectedMuscle, selectedData, muscleMap, handleSelect, clearSelection, fatigued, partial, recovered };
 }
