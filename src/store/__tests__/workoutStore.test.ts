@@ -79,3 +79,76 @@ describe("setDrawerView", () => {
     expect(useWorkoutStore.getState().drawerView).toBe("view");
   });
 });
+
+describe("workoutStore — local mutation event bus", () => {
+  beforeEach(() => {
+    // Reset store between tests
+    useWorkoutStore.setState({
+      localMutation: null,
+      localMutationSeq: 0,
+    });
+  });
+
+  it("emitLocalMutation sets the mutation and increments the sequence", () => {
+    useWorkoutStore.getState().emitLocalMutation({ type: "remove", id: "w1" });
+    const state = useWorkoutStore.getState();
+    expect(state.localMutation).toEqual({ type: "remove", id: "w1" });
+    expect(state.localMutationSeq).toBe(1);
+  });
+
+  it("emitting multiple mutations monotonically increments the sequence", () => {
+    const store = useWorkoutStore.getState();
+    store.emitLocalMutation({ type: "remove", id: "w1" });
+    store.emitLocalMutation({
+      type: "insert",
+      workout: {
+        id: "w2",
+        date: "2026-04-23T00:00:00.000Z",
+        dateFormatted: "Thu, Apr 23, 2026",
+        durationMinutes: 0,
+        notes: null,
+        exerciseNames: [],
+        totalSets: 0,
+      },
+    });
+    const state = useWorkoutStore.getState();
+    expect(state.localMutationSeq).toBe(2);
+    expect(state.localMutation?.type).toBe("insert");
+  });
+
+  it("emits edit mutations with partial patches", () => {
+    useWorkoutStore.getState().emitLocalMutation({
+      type: "edit",
+      id: "w1",
+      patch: { isDraft: false },
+    });
+    const state = useWorkoutStore.getState();
+    expect(state.localMutation).toEqual({
+      type: "edit",
+      id: "w1",
+      patch: { isDraft: false },
+    });
+  });
+
+  it("emits restore mutations with the full workout and after-id anchor", () => {
+    const w = {
+      id: "w1",
+      date: "2026-04-23T00:00:00.000Z",
+      dateFormatted: "Thu, Apr 23, 2026",
+      durationMinutes: 0,
+      notes: null,
+      exerciseNames: [],
+      totalSets: 0,
+    };
+    useWorkoutStore.getState().emitLocalMutation({
+      type: "restore",
+      workout: w,
+      afterId: "w0",
+    });
+    expect(useWorkoutStore.getState().localMutation).toEqual({
+      type: "restore",
+      workout: w,
+      afterId: "w0",
+    });
+  });
+});
