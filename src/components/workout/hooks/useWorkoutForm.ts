@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { toLocalISODate } from "@/lib/utils";
 import { fetchWithAuth } from "@/lib/fetch";
+import { optimisticMutate } from "@/lib/optimistic";
 import type { ExerciseEntry, Exercise, WorkoutFormInitialData, WorkoutFormProps, WorkoutSaveData, Workout, WorkoutDetail } from "@/types/workout";
 import { useWorkoutStore } from "@/store/workoutStore";
 
@@ -58,18 +59,38 @@ export function useWorkoutForm({
         .split(",")
         .map((m) => m.trim())
         .filter(Boolean);
-      const res = await fetchWithAuth("/api/exercises", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          muscle_groups,
-          equipment: equipment.trim() || null,
-        }),
+
+      const created = await optimisticMutate<Exercise[], Exercise>({
+        // Match every cached exercise-search key so the optimistic row appears in all
+        // active dropdowns immediately. clearCache() below triggers a refetch afterward,
+        // which replaces this optimistic value with the canonical server list.
+        key: (k: unknown) => typeof k === "string" && k.startsWith("/api/exercises"),
+        optimisticData: (prev: Exercise[] | undefined) => {
+          const optimistic: Exercise = {
+            id: `optimistic-${crypto.randomUUID()}`,
+            name: name.trim(),
+            muscle_groups,
+            equipment: equipment.trim() || null,
+            is_custom: true,
+          };
+          return prev ? [optimistic, ...prev] : [optimistic];
+        },
+        request: async () => {
+          const res = await fetchWithAuth("/api/exercises", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: name.trim(),
+              muscle_groups,
+              equipment: equipment.trim() || null,
+            }),
+          });
+          if (!res.ok) throw new Error();
+          return res.json();
+        },
       });
-      if (!res.ok) throw new Error();
-      handleAddExercise(await res.json());
-      clearCache(); // also invalidates SWR exercise keys via useExerciseSearch.clearCache()
+      handleAddExercise(created);
+      clearCache(); // refetches exercise search keys; replaces the optimistic row with real server list.
     } catch {
       toast.error("Failed to create exercise");
       setError("Failed to create custom exercise");
