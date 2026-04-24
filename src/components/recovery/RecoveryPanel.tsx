@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import useSWR from "swr";
+import useSWR, { preload } from "swr";
 import type { MuscleRecovery } from "@/types/recovery";
 import type { UserProfile } from "@/types/user";
 import { BodyMapFront } from "./BodyMapFront";
 import { BodyMapBack } from "./BodyMapBack";
 import { useRecoverySelection } from "./hooks/useRecoverySelection";
 import { useRecovery } from "@/lib/hooks";
+import { swrFetcher } from "@/lib/fetch";
 import { normalizeGender } from "@/lib/utils";
 
 type Props = {
@@ -27,6 +28,7 @@ export function RecoveryPanel({ recovery: serverRecovery }: Props) {
         <h2 className="font-display text-2xl text-primary tracking-tight">Recovery</h2>
         <Link
           href="/recovery"
+          onMouseEnter={() => preload("/api/recovery", swrFetcher)}
           className="text-xs text-accent hover:text-accent-hover font-medium transition-colors flex items-center gap-1"
         >
           Full view
@@ -37,7 +39,11 @@ export function RecoveryPanel({ recovery: serverRecovery }: Props) {
       </div>
 
       {/* Body maps: front + back side by side */}
-      <Link href="/recovery" className="block">
+      <Link
+        href="/recovery"
+        onMouseEnter={() => preload("/api/recovery", swrFetcher)}
+        className="block"
+      >
         <div className="bg-surface border border-border-subtle rounded-xl overflow-hidden hover:border-border transition-colors">
           <div className="flex">
             <div className="flex-1 min-w-0 px-2 pt-3 pb-1">
