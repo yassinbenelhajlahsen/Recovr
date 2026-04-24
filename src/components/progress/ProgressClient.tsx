@@ -30,6 +30,18 @@ function getChartLabel(metricMode: "1rm" | "topWeight" | "both") {
   return "Est. 1RM & Top Weight";
 }
 
+function ProgressChartSkeleton() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="space-y-3">
+        <div className="skeleton h-10 w-full rounded-lg" />
+        <div className="skeleton h-72 w-full rounded-xl" />
+      </div>
+      <div className="skeleton h-[340px] w-full rounded-xl" />
+    </div>
+  );
+}
+
 export function ProgressClient() {
   const { data, isLoading, error, mutate } = useProgress();
 
@@ -58,13 +70,7 @@ export function ProgressClient() {
             <div key={i} className="skeleton flex-1 h-10 rounded-full" />
           ))}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="space-y-3">
-            <div className="skeleton h-10 w-full rounded-lg" />
-            <div className="skeleton h-72 w-full rounded-xl" />
-          </div>
-          <div className="skeleton h-[340px] w-full rounded-xl" />
-        </div>
+        <ProgressChartSkeleton />
       </div>
     );
   }
