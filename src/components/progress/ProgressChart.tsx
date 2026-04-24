@@ -10,11 +10,8 @@ import {
   Tooltip,
 } from "recharts";
 
-export type LineConfig = {
-  dataKey: string;
-  color: string;
-  label: string;
-};
+import type { LineConfig } from "@/types/progress";
+export type { LineConfig };
 
 type Props = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

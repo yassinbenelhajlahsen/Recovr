@@ -37,3 +37,9 @@ export type ProgressClientProps = {
   sessionsByExercise: Record<string, ExerciseSession[]>;
   bodyWeightHistory: BodyWeightEntry[];
 };
+
+export type LineConfig = {
+  dataKey: string;
+  color: string;
+  label: string;
+};
