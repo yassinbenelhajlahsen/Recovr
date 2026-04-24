@@ -8,6 +8,7 @@ import { WorkoutDetailDrawer } from "@/components/workout/WorkoutDetailDrawer";
 import { WorkoutsFilter } from "@/components/workout/WorkoutsFilter";
 import { RecoveryPanel } from "@/components/recovery/RecoveryPanel";
 import type { DashboardClientProps as Props, Workout } from "@/types/workout";
+import { prefetchOnHover } from "@/lib/hooks";
 
 export function DashboardClient({ displayName, workouts, hasFilters, recovery, openDraftId }: Props) {
   const openDrawer = useWorkoutStore((s) => s.openDrawer);
@@ -129,6 +130,7 @@ export function DashboardClient({ displayName, workouts, hasFilters, recovery, o
                       style={{ overflow: "hidden" }}
                     >
                       <button
+                        {...prefetchOnHover(`/api/workouts/${w.id}`)}
                         onClick={() => openDrawer(w.id, w)}
                         className="group w-full text-left block rounded-xl bg-surface border border-border-subtle px-6 py-5 hover:bg-elevated hover:shadow-md transition-all"
                       >
