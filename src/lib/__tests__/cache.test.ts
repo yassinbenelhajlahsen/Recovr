@@ -319,6 +319,12 @@ describe("dashboard cache helpers", () => {
     expect(result).toEqual(payload);
   });
 
+  it("getCachedDashboard returns null when Redis throws", async () => {
+    (redis.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
+    const result = await getCachedDashboard(USER_ID);
+    expect(result).toBeNull();
+  });
+
   it("setCachedDashboard writes with 300s TTL", async () => {
     await setCachedDashboard(USER_ID, []);
     expect(redis.set).toHaveBeenCalledWith(
@@ -328,8 +334,18 @@ describe("dashboard cache helpers", () => {
     );
   });
 
+  it("setCachedDashboard swallows Redis errors", async () => {
+    (redis.set as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
+    await expect(setCachedDashboard(USER_ID, [])).resolves.toBeUndefined();
+  });
+
   it("invalidateDashboard deletes the correct key", async () => {
     await invalidateDashboard(USER_ID);
     expect(redis.del).toHaveBeenCalledWith(`dashboard:${USER_ID}`);
+  });
+
+  it("invalidateDashboard swallows Redis errors", async () => {
+    (redis.del as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
+    await expect(invalidateDashboard(USER_ID)).resolves.toBeUndefined();
   });
 });
