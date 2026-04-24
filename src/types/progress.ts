@@ -43,3 +43,6 @@ export type LineConfig = {
   color: string;
   label: string;
 };
+
+/** Server-side alias for the /api/progress response body. Structurally identical to ProgressClientProps. */
+export type ProgressPayload = ProgressClientProps;
