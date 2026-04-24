@@ -3,13 +3,7 @@
 import { SWRConfig } from "swr";
 import { Toaster } from "sonner";
 import { ThemeProvider, useTheme } from "./ThemeProvider";
-import { fetchWithAuth } from "@/lib/fetch";
-
-async function swrFetcher<T>(url: string): Promise<T> {
-  const res = await fetchWithAuth(url);
-  if (!res.ok) throw new Error(`Fetch error: ${res.status}`);
-  return res.json();
-}
+import { swrFetcher } from "@/lib/fetch";
 
 function ThemedToaster() {
   const { theme } = useTheme();
