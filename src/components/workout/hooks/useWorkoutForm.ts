@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { toLocalISODate } from "@/lib/utils";
 import { fetchWithAuth } from "@/lib/fetch";
-import type { ExerciseEntry, Exercise, WorkoutFormInitialData, WorkoutFormProps, WorkoutSaveData, Workout } from "@/types/workout";
+import type { ExerciseEntry, Exercise, WorkoutFormInitialData, WorkoutFormProps, WorkoutSaveData, Workout, WorkoutDetail } from "@/types/workout";
 import { useWorkoutStore } from "@/store/workoutStore";
 
 interface UseWorkoutFormOptions {
@@ -156,6 +156,22 @@ export function useWorkoutForm({
           totalSets,
         },
       });
+
+      // Optimistically patch the detail SWR cache so the drawer "view" mode reflects
+      // the edit immediately. Only scalar fields — exercises/sets are reconstructed
+      // from form state, but the globalMutate call further down revalidates the full
+      // detail cache after the PUT succeeds.
+      globalMutate(
+        `/api/workouts/${workoutId}`,
+        (prev: WorkoutDetail | undefined) =>
+          prev ? {
+            ...prev,
+            date: optimisticSummary.date,
+            duration_minutes: optimisticSummary.durationMinutes,
+            notes: optimisticSummary.notes,
+          } : prev,
+        { revalidate: false },
+      );
     } else {
       emit({ type: "insert", workout: optimisticSummary });
     }
