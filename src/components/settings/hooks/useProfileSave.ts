@@ -15,7 +15,6 @@ export function useProfileSave(
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync name from user prop
     setName(user.name ?? "");
   }, [user]);
 

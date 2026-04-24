@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer } from "@/components/ui/Drawer";
 import { WorkoutForm } from "@/components/workout/WorkoutForm";
@@ -21,17 +19,17 @@ export function WorkoutDetailDrawer() {
     closeDrawer,
     setDrawerView,
   } = useWorkoutStore();
-  const router = useRouter();
 
   const { workout, setWorkout, loading } = useWorkoutDetail(isDrawerOpen, selectedWorkoutId);
 
+  // Form handles its own toast + optimistic list/SWR updates. Drawer just closes.
   function handleCreateSave() {
-    toast.success("Workout logged");
     closeDrawer();
-    router.refresh();
   }
 
   function handleEditSave(data: WorkoutSaveData) {
+    // Keep drawer-local state in sync so view mode renders immediately without waiting
+    // for SWR revalidation. Toast and cache invalidation happen in the form.
     setWorkout({
       id: data.id,
       date: data.date,
@@ -44,9 +42,7 @@ export function WorkoutDetailDrawer() {
         order: i,
       })),
     });
-    toast.success("Workout updated");
     setDrawerView("view");
-    router.refresh();
   }
 
   const drawerTitle =
@@ -115,10 +111,7 @@ export function WorkoutDetailDrawer() {
                 loading={loading}
                 previewData={previewData}
                 onEdit={() => setDrawerView("edit")}
-                onDelete={() => {
-                  closeDrawer();
-                  router.refresh();
-                }}
+                onDelete={closeDrawer}
               />
             </motion.div>
           )}
