@@ -41,7 +41,7 @@ export function DeleteWorkoutButton({
     // Optimistic: mark the card as exiting (triggers the 300ms animation in
     // DashboardClient), then drop the row from the local list after the window.
     setDeletingWorkoutId(workoutId);
-    setTimeout(() => emit({ type: "remove", id: workoutId }), 300);
+    const removeTimer = setTimeout(() => emit({ type: "remove", id: workoutId }), 300);
 
     // Close the drawer immediately so the user feels the action landed.
     if (onDelete) onDelete();
@@ -62,15 +62,14 @@ export function DeleteWorkoutButton({
       // Kick the server-rendered dashboard so a full reload shows the real list.
       router.refresh();
     } catch {
+      // Cancel the queued remove so the row isn't ripped out after a failed delete.
+      clearTimeout(removeTimer);
       toast.error("Failed to delete workout");
       setLoading(false);
       setConfirming(false);
-      // Clear the exit-animation flag. The optimistic `remove` is about to fire
-      // (queued on a 300ms timer); the card will have been removed from the local
-      // list by then — router.refresh() above would restore it, but we only run
-      // that on success. On failure, rely on the NEXT server-driven refresh from
-      // any other flow to re-hydrate. Best-effort rollback.
       setDeletingWorkoutId(null);
+      // Re-hydrate in case the row was already removed (fast server fail beats the timer).
+      router.refresh();
     }
   }
 
