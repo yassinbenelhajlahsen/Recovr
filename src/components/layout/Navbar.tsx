@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
+import { preload } from "swr";
 import { useAppStore } from "@/store/appStore";
 import { UserMenu } from "./UserMenu";
 import { GuestMenu } from "./GuestMenu";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import { useNavbar } from "./hooks/useNavbar";
 import { UserIcon } from "@/components/ui/icons";
+import { swrFetcher } from "@/lib/fetch";
 
 function getInitials(name?: string | null, email?: string): string {
   if (name) {
@@ -74,6 +76,7 @@ export function Navbar() {
                 </Link>
                 <Link
                   href="/progress"
+                  onMouseEnter={() => preload("/api/progress", swrFetcher)}
                   className={`text-sm font-medium px-3 py-2 rounded-lg transition-colors ${
                     pathname === "/progress"
                       ? "text-accent"
@@ -84,6 +87,7 @@ export function Navbar() {
                 </Link>
                 <Link
                   href="/recovery"
+                  onMouseEnter={() => preload("/api/recovery", swrFetcher)}
                   className={`text-sm font-medium px-3 py-2 rounded-lg transition-colors ${
                     pathname === "/recovery"
                       ? "text-accent"
