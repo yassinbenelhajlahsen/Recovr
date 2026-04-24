@@ -267,6 +267,31 @@ export function useWorkoutForm({
     }
     setError("");
     setSavingDraft(true);
+
+    const tempId = `optimistic-${crypto.randomUUID()}`;
+    const totalSets = exercises
+      .flatMap((ex) => ex.sets.filter((s) => s.reps && s.weight))
+      .length;
+    const optimisticDraft: Workout = {
+      id: tempId,
+      date: new Date(date).toISOString(),
+      dateFormatted: new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(new Date(date)),
+      durationMinutes: duration ? Number(duration) : null,
+      notes: notes || null,
+      exerciseNames: exercises.map((ex) => ex.exercise_name),
+      totalSets,
+      isDraft: true,
+    };
+
+    const emit = useWorkoutStore.getState().emitLocalMutation;
+    emit({ type: "insert", workout: optimisticDraft });
+
     try {
       const body = {
         date,
@@ -292,10 +317,19 @@ export function useWorkoutForm({
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
+      const { id } = await res.json();
+
+      // Reconcile: swap temp id for real id. Single edit patch — see Task 5 for
+      // why two sync emits would collapse into one render.
+      if (id !== tempId) {
+        emit({ type: "edit", id: tempId, patch: { id } });
+      }
+
       toast.success("Draft saved");
-      router.refresh();
       if (onDraftSave) onDraftSave();
+      // router.refresh() removed — the event bus keeps the list in sync.
     } catch {
+      emit({ type: "remove", id: tempId });
       toast.error("Failed to save draft");
       setError("Failed to save draft. Please try again.");
       setSavingDraft(false);
