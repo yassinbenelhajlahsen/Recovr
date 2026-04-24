@@ -52,14 +52,13 @@ export function SettingsDrawer({ open, onClose, user }: SettingsDrawerProps) {
           key={tab}
           custom={slideDirection}
           variants={{
-            enter: (d: number) => ({ x: d * 60, opacity: 0 }),
-            center: { x: 0, opacity: 1 },
-            exit: (d: number) => ({ x: d * -60, opacity: 0 }),
+            enter: (d: number) => ({ x: d * 60, opacity: 0, transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] } }),
+            center: { x: 0, opacity: 1, transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] } },
+            exit: (d: number) => ({ x: d * -60, opacity: 0, transition: { duration: 0.12, ease: [0.64, 0, 0.78, 0] } }),
           }}
           initial="enter"
           animate="center"
           exit="exit"
-          transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
           className="px-6 py-6 space-y-8"
         >
           {tab === "account" && (
