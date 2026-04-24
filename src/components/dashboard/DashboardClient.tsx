@@ -3,17 +3,37 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { useWorkoutStore } from "@/store/workoutStore";
+import { useWorkoutStore, type LocalMutation } from "@/store/workoutStore";
 import { WorkoutDetailDrawer } from "@/components/workout/WorkoutDetailDrawer";
 import { WorkoutsFilter } from "@/components/workout/WorkoutsFilter";
 import { RecoveryPanel } from "@/components/recovery/RecoveryPanel";
 import type { DashboardClientProps as Props, Workout } from "@/types/workout";
 import { prefetchOnHover } from "@/lib/hooks";
 
+function applyLocalMutation(prev: Workout[], m: LocalMutation): Workout[] {
+  switch (m.type) {
+    case "insert":
+      return m.at === "end" ? [...prev, m.workout] : [m.workout, ...prev];
+    case "remove":
+      return prev.filter((w) => w.id !== m.id);
+    case "edit":
+      return prev.map((w) => (w.id === m.id ? { ...w, ...m.patch } : w));
+    case "restore": {
+      if (m.afterId === null) return [m.workout, ...prev];
+      const idx = prev.findIndex((w) => w.id === m.afterId);
+      if (idx === -1) return [m.workout, ...prev];
+      return [...prev.slice(0, idx + 1), m.workout, ...prev.slice(idx + 1)];
+    }
+  }
+}
+
 export function DashboardClient({ displayName, workouts, hasFilters, recovery, openDraftId }: Props) {
   const openDrawer = useWorkoutStore((s) => s.openDrawer);
   const deletingWorkoutId = useWorkoutStore((s) => s.deletingWorkoutId);
   const setDeletingWorkoutId = useWorkoutStore((s) => s.setDeletingWorkoutId);
+  const localMutation = useWorkoutStore((s) => s.localMutation);
+  const localMutationSeq = useWorkoutStore((s) => s.localMutationSeq);
+  const lastSeqRef = useRef(localMutationSeq);
   const router = useRouter();
 
   const [localWorkouts, setLocalWorkouts] = useState<Workout[]>(workouts);
@@ -44,6 +64,13 @@ export function DashboardClient({ displayName, workouts, hasFilters, recovery, o
       setLocalWorkouts(workouts);
     }
   }, [workouts, setDeletingWorkoutId]);
+
+  useEffect(() => {
+    if (localMutationSeq === lastSeqRef.current) return;
+    lastSeqRef.current = localMutationSeq;
+    if (!localMutation) return;
+    setLocalWorkouts((prev) => applyLocalMutation(prev, localMutation));
+  }, [localMutationSeq, localMutation]);
 
   useEffect(() => {
     if (openDraftId) {
