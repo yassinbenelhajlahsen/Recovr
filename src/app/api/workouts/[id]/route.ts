@@ -184,17 +184,13 @@ export const PATCH = withLogging(async function PATCH(
     }
 
     await prisma.workout.update({ where: { id }, data: { is_draft: body.is_draft } });
-    // Publishing (false) moves the workout into recovery/progress; un-publishing (true) moves it out.
-    // Either way the dashboard list order/content may change.
-    if (body.is_draft === false) {
-      await Promise.all([
-        invalidateRecovery(user.id),
-        invalidateProgress(user.id),
-        invalidateDashboard(user.id),
-      ]);
-    } else {
-      await invalidateDashboard(user.id);
-    }
+    // Flipping is_draft in either direction changes whether the workout is in the
+    // recovery/progress windows, and the dashboard list order/content may change.
+    await Promise.all([
+      invalidateRecovery(user.id),
+      invalidateProgress(user.id),
+      invalidateDashboard(user.id),
+    ]);
     return NextResponse.json({ ok: true });
   } catch (err) {
     logger.error({ err }, "PATCH /api/workouts/[id] failed");
