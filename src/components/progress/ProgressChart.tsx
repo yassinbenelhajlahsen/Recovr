@@ -11,7 +11,6 @@ import {
 } from "recharts";
 
 import type { LineConfig } from "@/types/progress";
-export type { LineConfig };
 
 type Props = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

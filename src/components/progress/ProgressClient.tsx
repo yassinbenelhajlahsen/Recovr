@@ -5,7 +5,15 @@ import { useProgressFilters } from "./hooks/useProgressFilters";
 import { ExerciseSelector } from "./ExerciseSelector";
 import { DateRangeSelector } from "./DateRangeSelector";
 import { MetricSelector } from "./MetricSelector";
-import { ProgressChart } from "./ProgressChart";
+import dynamic from "next/dynamic";
+
+const ProgressChart = dynamic(
+  () => import("./ProgressChart").then((m) => m.ProgressChart),
+  {
+    ssr: false,
+    loading: () => <ProgressChartSkeleton />,
+  },
+);
 import { useProgress } from "@/lib/hooks";
 import { FetchError } from "@/components/ui/FetchError";
 
