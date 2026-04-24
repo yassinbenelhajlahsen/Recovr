@@ -6,7 +6,12 @@ import { ExerciseSelector } from "./ExerciseSelector";
 import { DateRangeSelector } from "./DateRangeSelector";
 import { MetricSelector } from "./MetricSelector";
 import dynamic from "next/dynamic";
+import { useProgress } from "@/lib/hooks";
+import { FetchError } from "@/components/ui/FetchError";
 
+const CHART_BLUE = "#5B8DEF";
+
+// ProgressChartSkeleton is a function declaration below and hoisted — safe to reference here.
 const ProgressChart = dynamic(
   () => import("./ProgressChart").then((m) => m.ProgressChart),
   {
@@ -14,10 +19,6 @@ const ProgressChart = dynamic(
     loading: () => <ProgressChartSkeleton />,
   },
 );
-import { useProgress } from "@/lib/hooks";
-import { FetchError } from "@/components/ui/FetchError";
-
-const CHART_BLUE = "#5B8DEF";
 
 function getChartLines(metricMode: "1rm" | "topWeight" | "both") {
   if (metricMode === "1rm") {
