@@ -35,27 +35,42 @@ export function DeleteWorkoutButton({
       return;
     }
     setLoading(true);
+
+    const emit = useWorkoutStore.getState().emitLocalMutation;
+
+    // Optimistic: mark the card as exiting (triggers the 300ms animation in
+    // DashboardClient), then drop the row from the local list after the window.
+    setDeletingWorkoutId(workoutId);
+    setTimeout(() => emit({ type: "remove", id: workoutId }), 300);
+
+    // Close the drawer immediately so the user feels the action landed.
+    if (onDelete) onDelete();
+
     try {
-      await fetchWithAuth(`/api/workouts/${workoutId}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`/api/workouts/${workoutId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+
       globalMutate(
         (k) => typeof k === "string" && k.startsWith("/api/workouts/"),
         undefined,
-        { revalidate: false }
+        { revalidate: false },
       );
       globalMutate("/api/recovery");
       globalMutate("/api/progress");
       toast.success("Workout deleted");
-      setDeletingWorkoutId(workoutId);
-      if (onDelete) {
-        onDelete();
-      } else {
-        router.push("/workouts");
-        router.refresh();
-      }
+
+      // Kick the server-rendered dashboard so a full reload shows the real list.
+      router.refresh();
     } catch {
       toast.error("Failed to delete workout");
       setLoading(false);
       setConfirming(false);
+      // Clear the exit-animation flag. The optimistic `remove` is about to fire
+      // (queued on a 300ms timer); the card will have been removed from the local
+      // list by then — router.refresh() above would restore it, but we only run
+      // that on success. On failure, rely on the NEXT server-driven refresh from
+      // any other flow to re-hydrate. Best-effort rollback.
+      setDeletingWorkoutId(null);
     }
   }
 
