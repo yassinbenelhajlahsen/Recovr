@@ -214,7 +214,6 @@ export function useSuggestion() {
       if (contentType.includes("application/json")) {
         // Cached response — instant JSON path
         const data = await res.json();
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- strip metadata fields from suggestion object
         const { _cooldown, _cached, _draftId, _suggestionId, ...suggestion } = data;
         if (typeof _cooldown === "number" && _cooldown > 0) {
           setCooldownSeconds(_cooldown);
