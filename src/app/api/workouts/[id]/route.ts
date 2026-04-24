@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { invalidateRecovery, invalidateSuggestionDraftId } from "@/lib/cache";
+import {
+  invalidateRecovery,
+  invalidateProgress,
+  invalidateDashboard,
+  invalidateSuggestionDraftId,
+} from "@/lib/cache";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logger, withLogging } from "@/lib/logger";
 import {
@@ -144,6 +149,8 @@ export const PUT = withLogging(async function PUT(
 
     await Promise.all([
       invalidateRecovery(user.id),
+      invalidateProgress(user.id),
+      invalidateDashboard(user.id),
       parsedBodyWeight ? syncProfileWeight(user.id, id, parsedBodyWeight) : Promise.resolve(),
     ]);
 
@@ -177,9 +184,16 @@ export const PATCH = withLogging(async function PATCH(
     }
 
     await prisma.workout.update({ where: { id }, data: { is_draft: body.is_draft } });
-    // Publishing a draft (is_draft → false) brings it into the recovery window
+    // Publishing (false) moves the workout into recovery/progress; un-publishing (true) moves it out.
+    // Either way the dashboard list order/content may change.
     if (body.is_draft === false) {
-      await invalidateRecovery(user.id);
+      await Promise.all([
+        invalidateRecovery(user.id),
+        invalidateProgress(user.id),
+        invalidateDashboard(user.id),
+      ]);
+    } else {
+      await invalidateDashboard(user.id);
     }
     return NextResponse.json({ ok: true });
   } catch (err) {
@@ -208,6 +222,8 @@ export const DELETE = withLogging(async function DELETE(
     await prisma.workout.delete({ where: { id } });
     await Promise.all([
       invalidateRecovery(user.id),
+      invalidateProgress(user.id),
+      invalidateDashboard(user.id),
       invalidateSuggestionDraftId(user.id),
     ]);
     return NextResponse.json({ ok: true });

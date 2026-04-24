@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { invalidateExercises, setSuggestionDraftId } from "@/lib/cache";
+import { invalidateExercises, invalidateDashboard, setSuggestionDraftId } from "@/lib/cache";
 import { resolveExercise } from "@/lib/exerciseMatcher";
 import { validateWorkoutDate, validateExercises } from "@/lib/workout-validation";
 import { linkDraftToSuggestion } from "@/lib/suggestion";
@@ -90,6 +90,9 @@ export const POST = withLogging(async function POST(request: Request) {
 
     // Track that a draft was created from the current suggestion (for UI dedup)
     void setSuggestionDraftId(user.id, workout.id);
+
+    // Drafts appear on the dashboard list even though they don't affect recovery/progress
+    await invalidateDashboard(user.id);
 
     // Persist the draft link to the DB Suggestion row
     if (suggestionId) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { invalidateRecovery } from "@/lib/cache";
+import { invalidateRecovery, invalidateProgress, invalidateDashboard } from "@/lib/cache";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logger, withLogging } from "@/lib/logger";
 import {
@@ -150,9 +150,15 @@ export const POST = withLogging(async function POST(request: Request) {
       select: { id: true },
     });
 
-    // Invalidate recovery cache for non-draft workouts (drafts are excluded from recovery)
+    // Invalidate caches. Drafts don't affect recovery/progress but do show on the dashboard.
     if (is_draft !== true) {
-      await invalidateRecovery(user.id);
+      await Promise.all([
+        invalidateRecovery(user.id),
+        invalidateProgress(user.id),
+        invalidateDashboard(user.id),
+      ]);
+    } else {
+      await invalidateDashboard(user.id);
     }
 
     // Smart sync: update User.weight_lbs only if this is the latest workout with body_weight (skip for drafts)
