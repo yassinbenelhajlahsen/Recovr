@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { mutate as globalMutate } from "swr";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { fetchWithAuth } from "@/lib/fetch";
+import { optimisticMutate } from "@/lib/optimistic";
 import type { UserProfile } from "@/types/user";
 
 export function useProfileSave(
@@ -25,30 +25,41 @@ export function useProfileSave(
     setSaving(true);
     const trimmedName = name.trim() || null;
     const supabase = createClient();
-    const [res] = await Promise.all([
-      fetchWithAuth("/api/user/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: trimmedName,
-          height_inches: user.height_inches,
-          weight_lbs: user.weight_lbs,
-          fitness_goals: user.fitness_goals ?? [],
+
+    const optimisticProfile: UserProfile = { ...user, name: trimmedName };
+
+    try {
+      await Promise.all([
+        optimisticMutate<UserProfile, UserProfile>({
+          key: "/api/user/profile",
+          optimisticData: optimisticProfile,
+          request: async () => {
+            const res = await fetchWithAuth("/api/user/profile", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: trimmedName,
+                height_inches: user.height_inches,
+                weight_lbs: user.weight_lbs,
+                fitness_goals: user.fitness_goals ?? [],
+              }),
+            });
+            if (!res.ok) throw new Error();
+            return res.json();
+          },
         }),
-      }),
-      supabase.auth.updateUser({
-        data: { full_name: trimmedName },
-      }),
-    ]);
-    setSaving(false);
-    if (!res.ok) {
+        supabase.auth.updateUser({ data: { full_name: trimmedName } }),
+      ]);
+
+      toast.success("Profile updated");
+      onClose();
+      // router.refresh() kept — the navbar server component reads user.name.
+      router.refresh();
+    } catch {
       toast.error("Failed to update profile");
-      return;
+    } finally {
+      setSaving(false);
     }
-    toast.success("Profile updated");
-    globalMutate("/api/user/profile");
-    onClose();
-    router.refresh();
   }
 
   return { name, setName, saving, isAccountDirty, handleSaveProfile };
