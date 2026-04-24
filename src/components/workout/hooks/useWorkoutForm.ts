@@ -243,8 +243,10 @@ export function useWorkoutForm({
     } catch {
       // Rollback the dashboard list change.
       if (isEdit) {
-        // Edit rollback: we don't have the pre-edit summary in scope. Easiest: refresh
-        // to pull the canonical server state.
+        // Edit rollback: we don't have the pre-edit summary in scope. Force-revalidate
+        // the detail cache (we wrote an optimistic patch above) and refresh the server
+        // component to pull canonical state.
+        globalMutate(`/api/workouts/${workoutId}`);
         router.refresh();
       } else {
         emit({ type: "remove", id: tempId });
