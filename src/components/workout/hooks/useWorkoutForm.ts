@@ -5,7 +5,8 @@ import { toast } from "sonner";
 
 import { toLocalISODate } from "@/lib/utils";
 import { fetchWithAuth } from "@/lib/fetch";
-import type { ExerciseEntry, Exercise, WorkoutFormInitialData, WorkoutFormProps, WorkoutSaveData } from "@/types/workout";
+import type { ExerciseEntry, Exercise, WorkoutFormInitialData, WorkoutFormProps, WorkoutSaveData, Workout } from "@/types/workout";
+import { useWorkoutStore } from "@/store/workoutStore";
 
 interface UseWorkoutFormOptions {
   workoutId?: string;
@@ -120,6 +121,45 @@ export function useWorkoutForm({
     }
     setError("");
     setSaving(true);
+
+    const tempId = isEdit ? workoutId! : `optimistic-${crypto.randomUUID()}`;
+    const totalSets = exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
+    const optimisticSummary: Workout = {
+      id: tempId,
+      date: new Date(date).toISOString(),
+      dateFormatted: new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(new Date(date)),
+      durationMinutes: duration ? Number(duration) : null,
+      notes: notes || null,
+      exerciseNames: exercises.map((ex) => ex.exercise_name),
+      totalSets,
+      isDraft: false,
+    };
+
+    // Optimistic: add to dashboard list (create) or patch in place (edit).
+    const emit = useWorkoutStore.getState().emitLocalMutation;
+    if (isEdit) {
+      emit({
+        type: "edit",
+        id: tempId,
+        patch: {
+          date: optimisticSummary.date,
+          dateFormatted: optimisticSummary.dateFormatted,
+          durationMinutes: optimisticSummary.durationMinutes,
+          notes: optimisticSummary.notes,
+          exerciseNames: optimisticSummary.exerciseNames,
+          totalSets,
+        },
+      });
+    } else {
+      emit({ type: "insert", workout: optimisticSummary });
+    }
+
     try {
       const body = {
         date,
@@ -142,18 +182,27 @@ export function useWorkoutForm({
           method: isEdit ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
-        }
+        },
       );
       if (!res.ok) throw new Error();
       const { id } = await res.json();
-      // Invalidate SWR cache for this workout + recovery (reflects new volume)
+
+      // Reconcile: swap temp id for real id on create.
+      if (!isEdit && id !== tempId) {
+        emit({ type: "remove", id: tempId });
+        emit({ type: "insert", workout: { ...optimisticSummary, id } });
+      }
+
+      toast.success(isEdit ? "Workout updated" : "Workout logged");
+
       globalMutate(
         (k) => typeof k === "string" && k.startsWith("/api/workouts/"),
         undefined,
-        { revalidate: false }
+        { revalidate: false },
       );
       globalMutate("/api/recovery");
       globalMutate("/api/progress");
+
       if (onSave) {
         const saveData: WorkoutSaveData = {
           id,
@@ -173,11 +222,17 @@ export function useWorkoutForm({
           })),
         };
         onSave(saveData);
-      } else {
-        router.push(`/workouts/${id}`);
-        router.refresh();
       }
+      // router.push/refresh removed — the optimistic emit + globalMutate handle UI updates.
     } catch {
+      // Rollback the dashboard list change.
+      if (isEdit) {
+        // Edit rollback: we don't have the pre-edit summary in scope. Easiest: refresh
+        // to pull the canonical server state.
+        router.refresh();
+      } else {
+        emit({ type: "remove", id: tempId });
+      }
       toast.error("Failed to save workout");
       setSaving(false);
     }
