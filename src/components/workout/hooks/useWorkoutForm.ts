@@ -187,10 +187,10 @@ export function useWorkoutForm({
       if (!res.ok) throw new Error();
       const { id } = await res.json();
 
-      // Reconcile: swap temp id for real id on create.
+      // Reconcile: swap temp id for real id on create. Single edit patch — two sync
+      // emits would collapse into one render, dropping the remove and leaving duplicates.
       if (!isEdit && id !== tempId) {
-        emit({ type: "remove", id: tempId });
-        emit({ type: "insert", workout: { ...optimisticSummary, id } });
+        emit({ type: "edit", id: tempId, patch: { id } });
       }
 
       toast.success(isEdit ? "Workout updated" : "Workout logged");
