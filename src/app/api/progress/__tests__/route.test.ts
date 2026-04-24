@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "@/app/api/progress/route";
 import { mockUnauthorized, mockAuthorized, TEST_USER_ID } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { redis } from "@/lib/redis";
 
 function makeRequest() {
   return new Request("http://localhost/api/progress");
@@ -10,6 +11,8 @@ function makeRequest() {
 beforeEach(() => {
   vi.clearAllMocks();
   mockAuthorized();
+  (redis.get as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+  (redis.set as ReturnType<typeof vi.fn>).mockResolvedValue("OK");
   (prisma.workoutExercise.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (prisma.workout.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 });
@@ -116,5 +119,37 @@ describe("GET /api/progress", () => {
     const data = await res.json();
     expect(data.sessionsByExercise["ex-bench"]).toHaveLength(1);
     expect(data.sessionsByExercise["ex-bench"][0].sets).toHaveLength(2);
+  });
+});
+
+describe("GET /api/progress cache-aside", () => {
+  it("returns cached payload without hitting Prisma when cache is warm", async () => {
+    const cached = { exercises: [], sessionsByExercise: {}, bodyWeightHistory: [] };
+    (redis.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(cached);
+
+    const res = await GET(makeRequest());
+    const body = await res.json();
+
+    expect(redis.get).toHaveBeenCalledWith(`progress:${TEST_USER_ID}`);
+    expect(prisma.workoutExercise.findMany).not.toHaveBeenCalled();
+    expect(prisma.workout.findMany).not.toHaveBeenCalled();
+    expect(body).toEqual(cached);
+  });
+
+  it("hits Prisma and writes cache on miss", async () => {
+    (redis.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+    (prisma.workoutExercise.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
+    (prisma.workout.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
+
+    const res = await GET(makeRequest());
+
+    expect(prisma.workoutExercise.findMany).toHaveBeenCalled();
+    expect(prisma.workout.findMany).toHaveBeenCalled();
+    expect(redis.set).toHaveBeenCalledWith(
+      `progress:${TEST_USER_ID}`,
+      { exercises: [], sessionsByExercise: {}, bodyWeightHistory: [] },
+      { ex: 300 },
+    );
+    expect(res.status).toBe(200);
   });
 });

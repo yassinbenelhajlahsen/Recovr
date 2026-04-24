@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { logger, withLogging } from "@/lib/logger";
+import { getCachedProgress, setCachedProgress } from "@/lib/cache";
 import type { PerformedExercise, ExerciseSession, BodyWeightEntry } from "@/types/progress";
 
 export const GET = withLogging(async function GET() {
@@ -15,6 +16,11 @@ export const GET = withLogging(async function GET() {
   const userId = claims.claims.sub as string;
 
   try {
+    const cached = await getCachedProgress(userId);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
     const [rawSessions, rawBodyWeight] = await Promise.all([
       prisma.workoutExercise.findMany({
         where: { workout: { user_id: userId, is_draft: false } },
@@ -63,7 +69,10 @@ export const GET = withLogging(async function GET() {
       weight: w.body_weight!,
     }));
 
-    return NextResponse.json({ exercises, sessionsByExercise, bodyWeightHistory });
+    const payload = { exercises, sessionsByExercise, bodyWeightHistory };
+    await setCachedProgress(userId, payload);
+
+    return NextResponse.json(payload);
   } catch (err) {
     logger.error({ err }, "GET /api/progress failed");
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
