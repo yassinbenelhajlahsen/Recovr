@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import useSWR from "swr";
+import useSWR, { preload } from "swr";
 import type { MuscleRecovery } from "@/types/recovery";
 import type { ProgressClientProps } from "@/types/progress";
+import { swrFetcher } from "./fetch";
 
 /**
  * Shared SWR hook for recovery data. Key "/api/recovery" is shared across all
@@ -34,3 +35,21 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
   return debounced;
 }
 
+/**
+ * Returns props to spread onto an element so that hovering it preloads the
+ * given SWR key into the cache. When the destination component mounts and
+ * calls useSWR(key), it finds the data already cached and skips the skeleton.
+ *
+ * Pass `null` to disable (e.g. when the key depends on state that isn't
+ * ready). This is a plain function, not a hook, so it is safe to call
+ * inside `.map()` callbacks.
+ *
+ * NOTE: `swrFetcher` here must match the global fetcher in Providers.tsx —
+ * if they diverge, preload and useSWR will populate/read different cache
+ * entries under the same key and silently disagree on shape.
+ */
+export function prefetchOnHover(key: string | null) {
+  return {
+    onMouseEnter: key ? () => preload(key, swrFetcher) : undefined,
+  };
+}
