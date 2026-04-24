@@ -1,9 +1,13 @@
 import { redis } from "@/lib/redis";
 import type { MuscleRecovery } from "@/types/recovery";
 import type { WorkoutSuggestion } from "@/types/suggestion";
+import type { ProgressPayload } from "@/types/progress";
+import type { DashboardWorkoutsPayload } from "@/types/dashboard";
 
 // TTLs in seconds
 const RECOVERY_TTL = 300; // 5 minutes
+const PROGRESS_TTL = 300; // 5 minutes
+const DASHBOARD_TTL = 300; // 5 minutes
 const SUGGESTION_TTL = 3600; // 1 hour
 const EXERCISES_TTL = 86400; // 24 hours
 
@@ -36,6 +40,74 @@ export async function invalidateRecovery(userId: string): Promise<void> {
   if (!redis) return;
   try {
     await redis.del(`recovery:${userId}`);
+  } catch {
+    // ignore
+  }
+}
+
+// ---- Progress ----
+
+export async function getCachedProgress(
+  userId: string,
+): Promise<ProgressPayload | null> {
+  if (!redis) return null;
+  try {
+    return await redis.get<ProgressPayload>(`progress:${userId}`);
+  } catch {
+    return null;
+  }
+}
+
+export async function setCachedProgress(
+  userId: string,
+  data: ProgressPayload,
+): Promise<void> {
+  if (!redis) return;
+  try {
+    await redis.set(`progress:${userId}`, data, { ex: PROGRESS_TTL });
+  } catch {
+    // ignore
+  }
+}
+
+export async function invalidateProgress(userId: string): Promise<void> {
+  if (!redis) return;
+  try {
+    await redis.del(`progress:${userId}`);
+  } catch {
+    // ignore
+  }
+}
+
+// ---- Dashboard ----
+
+export async function getCachedDashboard(
+  userId: string,
+): Promise<DashboardWorkoutsPayload | null> {
+  if (!redis) return null;
+  try {
+    return await redis.get<DashboardWorkoutsPayload>(`dashboard:${userId}`);
+  } catch {
+    return null;
+  }
+}
+
+export async function setCachedDashboard(
+  userId: string,
+  data: DashboardWorkoutsPayload,
+): Promise<void> {
+  if (!redis) return;
+  try {
+    await redis.set(`dashboard:${userId}`, data, { ex: DASHBOARD_TTL });
+  } catch {
+    // ignore
+  }
+}
+
+export async function invalidateDashboard(userId: string): Promise<void> {
+  if (!redis) return;
+  try {
+    await redis.del(`dashboard:${userId}`);
   } catch {
     // ignore
   }
