@@ -16,6 +16,12 @@ import {
   getCachedExercises,
   setCachedExercises,
   invalidateExercises,
+  getCachedProgress,
+  setCachedProgress,
+  invalidateProgress,
+  getCachedDashboard,
+  setCachedDashboard,
+  invalidateDashboard,
 } from "@/lib/cache";
 import { redis } from "@/lib/redis";
 
@@ -235,5 +241,95 @@ describe("invalidateExercises", () => {
   it("silently handles redis error", async () => {
     (redis.del as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("redis down"));
     await expect(invalidateExercises("u1")).resolves.toBeUndefined();
+  });
+});
+
+// ---- Progress ----
+
+describe("progress cache helpers", () => {
+  const USER_ID = "user-123";
+
+  it("getCachedProgress returns Redis value for the correct key", async () => {
+    const payload = { exercises: [], sessionsByExercise: {}, bodyWeightHistory: [] };
+    (redis.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(payload);
+
+    const result = await getCachedProgress(USER_ID);
+
+    expect(redis.get).toHaveBeenCalledWith(`progress:${USER_ID}`);
+    expect(result).toEqual(payload);
+  });
+
+  it("getCachedProgress returns null when Redis throws", async () => {
+    (redis.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
+    const result = await getCachedProgress(USER_ID);
+    expect(result).toBeNull();
+  });
+
+  it("setCachedProgress writes with 300s TTL", async () => {
+    const payload = { exercises: [], sessionsByExercise: {}, bodyWeightHistory: [] };
+    await setCachedProgress(USER_ID, payload);
+    expect(redis.set).toHaveBeenCalledWith(
+      `progress:${USER_ID}`,
+      payload,
+      { ex: 300 },
+    );
+  });
+
+  it("setCachedProgress swallows Redis errors", async () => {
+    (redis.set as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
+    await expect(
+      setCachedProgress(USER_ID, { exercises: [], sessionsByExercise: {}, bodyWeightHistory: [] }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("invalidateProgress deletes the correct key", async () => {
+    await invalidateProgress(USER_ID);
+    expect(redis.del).toHaveBeenCalledWith(`progress:${USER_ID}`);
+  });
+
+  it("invalidateProgress swallows Redis errors", async () => {
+    (redis.del as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
+    await expect(invalidateProgress(USER_ID)).resolves.toBeUndefined();
+  });
+});
+
+// ---- Dashboard ----
+
+describe("dashboard cache helpers", () => {
+  const USER_ID = "user-123";
+
+  it("getCachedDashboard returns Redis value for the correct key", async () => {
+    const payload = [
+      {
+        id: "w1",
+        date: "2026-04-23T00:00:00.000Z",
+        dateFormatted: "Thu, Apr 23, 2026",
+        durationMinutes: 45,
+        notes: null,
+        exerciseNames: ["Bench Press"],
+        totalSets: 3,
+        isDraft: false,
+      },
+    ];
+    (redis.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(payload);
+
+    const result = await getCachedDashboard(USER_ID);
+
+    expect(redis.get).toHaveBeenCalledWith(`dashboard:${USER_ID}`);
+    expect(result).toEqual(payload);
+  });
+
+  it("setCachedDashboard writes with 300s TTL", async () => {
+    await setCachedDashboard(USER_ID, []);
+    expect(redis.set).toHaveBeenCalledWith(
+      `dashboard:${USER_ID}`,
+      [],
+      { ex: 300 },
+    );
+  });
+
+  it("invalidateDashboard deletes the correct key", async () => {
+    await invalidateDashboard(USER_ID);
+    expect(redis.del).toHaveBeenCalledWith(`dashboard:${USER_ID}`);
   });
 });
