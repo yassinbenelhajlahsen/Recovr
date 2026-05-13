@@ -2,21 +2,24 @@ name: Keep Services Alive
 
 on:
   schedule:
-    - cron: "0 0 * * *" # Daily
+    - cron: "0 */12 * * *" # Every 12 hours
   workflow_dispatch: # allow manual trigger
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase database
+      - name: Upsert Supabase keep-alive row
         env:
           SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          curl -fsS -o /dev/null "$SUPABASE_URL/rest/v1/Exercise?select=id&limit=1" \
+          curl -fsS -o /dev/null -X POST "$SUPABASE_URL/rest/v1/KeepAlive" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates" \
+            --data "{\"id\":1,\"last_ping\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
 
       - name: Write to Upstash Redis
         env:

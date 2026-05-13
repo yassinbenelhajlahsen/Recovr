@@ -95,3 +95,8 @@ model Suggestion {
 
   @@index([user_id, created_at(sort: Desc)])
 }
+
+model KeepAlive {
+  id        Int      @id @default(1)
+  last_ping DateTime @default(now())
+}
